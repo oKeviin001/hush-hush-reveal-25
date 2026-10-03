@@ -15,6 +15,7 @@ import {
   Sparkles,
   Users,
   X,
+  Link2,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -204,7 +205,7 @@ const initialClues: Clue[] = [
   {
     id: "bed-button",
     title: "Botão preso no tecido",
-    description: "Um pequeno botão ficou preso na cama. O formato não combina com o uniforme dos quatro suspeitos iniciais.",
+    description: "Um pequeno botão ficou preso na cama. O padrão do tecido combina com a jaqueta de aprendiz de Daniel Cross.",
     source: "Cama",
     discovered: false,
   },
@@ -343,6 +344,7 @@ function Game() {
         status={status}
         onSolve={solveCase}
         onReset={resetCase}
+        endingOpen={endingOpen}
       >
         {journalOpen && (
           <Journal
@@ -569,6 +571,7 @@ function InvestigationView({
   status,
   onSolve,
   onReset,
+  endingOpen,
 }: {
   children: React.ReactNode;
   discoveredCount: number;
@@ -589,6 +592,7 @@ function InvestigationView({
   status: GameStatus;
   onSolve: () => void;
   onReset: () => void;
+  endingOpen: boolean;
 }) {
   const areas = ["Mesa", "Janela", "Porta", "Armário", "Cama", "Cordas"];
 
@@ -605,7 +609,7 @@ function InvestigationView({
           <div className="veil-progress">
             <span>PISTAS</span>
             <strong>{discoveredCount}</strong>
-            <span>/ 8</span>
+            <span>/ 12</span>
           </div>
         </div>
 
