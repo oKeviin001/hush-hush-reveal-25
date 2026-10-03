@@ -38,7 +38,22 @@ export const Route = createFileRoute("/")({
 });
 
 type View = "cases" | "briefing" | "investigation";
+type InterviewTarget = "Marcus Rook" | "Helena Graves" | "Tobias Flint" | "Rowan Pike";
 type JournalTab = "clues" | "suspects" | "timeline";
+
+type InterviewQuestion = {
+  id: string;
+  label: string;
+  response: string;
+  unlockClue?: string;
+  requires?: string[];
+};
+
+type Interview = {
+  role: string;
+  summary: string;
+  questions: InterviewQuestion[];
+};
 
 type Clue = {
   id: string;
@@ -68,6 +83,49 @@ const crew = [
   ["Thomas Ash", "Animais / carga viva"],
   ["Rose Mercer", "Auxiliar"],
 ];
+
+const interviews: Record<InterviewTarget, Interview> = {
+  "Marcus Rook": {
+    role: "Primeiro imediato",
+    summary: "Teve uma discussão séria com Elias pouco antes da tempestade.",
+    questions: [
+      { id: "where", label: "Onde você estava quando a tempestade começou?", response: "Na área de comando. Eu estava conferindo a tripulação." },
+      { id: "fight", label: "Por que você discutiu com Elias?", response: "Eu queria afastar algumas pessoas da tripulação. Elias não concordou." },
+      { id: "cargo", label: "O que você estava escondendo dele?", response: "Irregularidades na carga. Eu pretendia resolver aquilo antes de envolver o capitão.", unlockClue: "marcus-cargo" },
+      { id: "alone", label: "Você entrou na cabine de Elias?", response: "Não depois da discussão. Não naquela noite." },
+    ],
+  },
+  "Helena Graves": {
+    role: "Navegadora",
+    summary: "Conhece o navio e a rota melhor do que quase todos a bordo.",
+    questions: [
+      { id: "where", label: "Onde você estava quando a tempestade começou?", response: "Na sala de navegação." },
+      { id: "alone", label: "Você estava sozinha?", response: "Sim. Pelo menos durante a maior parte do tempo." },
+      { id: "route", label: "A carta náutica foi alterada?", response: "Houve uma alteração na rota. Eu não queria que todos soubessem onde estivemos antes da tempestade.", unlockClue: "helena-route" },
+      { id: "shadow", label: "Você viu alguém perto da cabine?", response: "Vi uma sombra no corredor. Não consegui identificar quem era." },
+    ],
+  },
+  "Tobias Flint": {
+    role: "Cozinheiro",
+    summary: "Seus horários não coincidem perfeitamente com os registros da cozinha.",
+    questions: [
+      { id: "where", label: "Onde você estava?", response: "Na cozinha. Preparando comida para a tripulação." },
+      { id: "bottles", label: "Por que algumas garrafas desapareceram?", response: "Eu estava guardando bebida que não deveria estar ali. Era um pequeno esquema de contrabando.", unlockClue: "tobias-smuggling" },
+      { id: "time", label: "Você saiu da cozinha?", response: "Por alguns minutos. Não queria que descobrissem o que eu estava fazendo." },
+      { id: "captain", label: "Você encontrou Elias naquela noite?", response: "Não. E não tenho motivo para mentir sobre isso." },
+    ],
+  },
+  "Rowan Pike": {
+    role: "Contramestre",
+    summary: "Foi visto em uma área onde não deveria estar durante a tempestade.",
+    questions: [
+      { id: "where", label: "Onde você estava durante a tempestade?", response: "Perto do compartimento de ferramentas." },
+      { id: "tools", label: "Por que estava ali?", response: "Uma parte do navio estava danificada. Eu estava tentando consertá-la em segredo.", unlockClue: "rowan-repair" },
+      { id: "access", label: "Você tinha acesso às ferramentas?", response: "Sim. Era meu trabalho. Isso não significa que usei alguma delas contra Elias." },
+      { id: "captain", label: "Por que esconder o reparo?", response: "Eu tinha medo de ser responsabilizado pela falha." },
+    ],
+  },
+};
 
 const initialClues: Clue[] = [
   {
@@ -102,6 +160,34 @@ const initialClues: Clue[] = [
     source: "Mesa",
     discovered: false,
   },
+  {
+    id: "marcus-cargo",
+    title: "Irregularidades na carga",
+    description: "Marcus escondia problemas na carga e mentiu para evitar que Elias descobrisse.",
+    source: "Interrogatório de Marcus",
+    discovered: false,
+  },
+  {
+    id: "helena-route",
+    title: "Alteração de rota",
+    description: "Helena admite que alterou a rota por um motivo pessoal, não para atacar Elias.",
+    source: "Interrogatório de Helena",
+    discovered: false,
+  },
+  {
+    id: "tobias-smuggling",
+    title: "Contrabando de bebida",
+    description: "Tobias escondia um pequeno esquema de contrabando e mentiu para protegê-lo.",
+    source: "Interrogatório de Tobias",
+    discovered: false,
+  },
+  {
+    id: "rowan-repair",
+    title: "Reparo secreto",
+    description: "Rowan estava consertando uma parte danificada do navio e temia ser responsabilizado.",
+    source: "Interrogatório de Rowan",
+    discovered: false,
+  },
 ];
 
 function Game() {
@@ -112,6 +198,8 @@ function Game() {
   const [selectedPerson, setSelectedPerson] = useState<string | null>(null);
   const [clues, setClues] = useState<Clue[]>(initialClues);
   const [visitedAreas, setVisitedAreas] = useState<string[]>([]);
+  const [interviewTarget, setInterviewTarget] = useState<InterviewTarget | null>(null);
+  const [askedQuestions, setAskedQuestions] = useState<string[]>([]);
 
   const discoveredCount = clues.filter((clue) => clue.discovered).length;
   const discoveredClues = useMemo(
@@ -138,6 +226,11 @@ function Game() {
     if (area === "Cordas") discoverClue("wet-rope");
   }
 
+  function askQuestion(person: InterviewTarget, question: InterviewQuestion) {
+    setAskedQuestions((current) => current.includes(person + ":" + question.id) ? current : [...current, person + ":" + question.id]);
+    if (question.unlockClue) discoverClue(question.unlockClue);
+  }
+
   if (view === "investigation") {
     return (
       <InvestigationView
@@ -148,6 +241,10 @@ function Game() {
         visitedAreas={visitedAreas}
         onInspect={inspect}
         onPerson={setSelectedPerson}
+        interviewTarget={interviewTarget}
+        onInterview={setInterviewTarget}
+        askedQuestions={askedQuestions}
+        onAskQuestion={askQuestion}
         onBack={() => setView("briefing")}
         onJournal={() => setJournalOpen(true)}
       >
@@ -365,6 +462,10 @@ function InvestigationView({
   visitedAreas,
   onInspect,
   onPerson,
+  interviewTarget,
+  onInterview,
+  askedQuestions,
+  onAskQuestion,
   onBack,
   onJournal,
 }: {
@@ -376,6 +477,10 @@ function InvestigationView({
   visitedAreas: string[];
   onInspect: (area: string) => void;
   onPerson: (person: string | null) => void;
+  interviewTarget: InterviewTarget | null;
+  onInterview: (person: InterviewTarget | null) => void;
+  askedQuestions: string[];
+  onAskQuestion: (person: InterviewTarget, question: InterviewQuestion) => void;
   onBack: () => void;
   onJournal: () => void;
 }) {
@@ -462,7 +567,7 @@ function InvestigationView({
                       <strong>{name}</strong>
                       <small>{role}</small>
                     </span>
-                    <ChevronRight size={14} />
+                    {(["Marcus Rook", "Helena Graves", "Tobias Flint", "Rowan Pike"] as string[]).includes(name) ? <MessageSquareText size={14} /> : <ChevronRight size={14} />}
                   </button>
                 ))}
               </div>
@@ -482,7 +587,10 @@ function InvestigationView({
         <AreaModal area={selectedArea} onClose={() => onInspect("")} />
       )}
       {selectedPerson && (
-        <PersonModal person={selectedPerson} onClose={() => onPerson(null)} />
+        <PersonModal person={selectedPerson} onClose={() => onPerson(null)} onInterview={(person) => { onPerson(null); onInterview(person); }} />
+      )}
+      {interviewTarget && (
+        <InterviewModal person={interviewTarget} askedQuestions={askedQuestions} onAsk={onAskQuestion} onClose={() => onInterview(null)} />
       )}
       {children}
     </Shell>
@@ -545,7 +653,7 @@ function AreaModal({ area, onClose }: { area: string; onClose: () => void }) {
   );
 }
 
-function PersonModal({ person, onClose }: { person: string; onClose: () => void }) {
+function PersonModal({ person, onClose, onInterview }: { person: string; onClose: () => void; onInterview: (person: InterviewTarget) => void }) {
   const entry = crew.find(([name]) => name === person);
   return (
     <div className="veil-modal-backdrop" onClick={onClose}>
@@ -560,10 +668,52 @@ function PersonModal({ person, onClose }: { person: string; onClose: () => void 
           Você ainda não sabe o suficiente sobre esta pessoa. Isso não significa
           que ela seja inocente — apenas que a investigação ainda não terminou.
         </p>
+        {(["Marcus Rook", "Helena Graves", "Tobias Flint", "Rowan Pike"] as string[]).includes(person) && (
+          <button className="veil-primary-button mt-7 w-full" onClick={() => onInterview(person as InterviewTarget)}>
+            INTERROGAR <MessageSquareText size={16} />
+          </button>
+        )}
         <div className="mt-6 flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-[var(--veil-dim)]">
           <MessageSquareText size={14} />
           Novos diálogos serão desbloqueados conforme as pistas forem conectadas.
         </div>
+      </div>
+    </div>
+  );
+}
+
+function InterviewModal({ person, askedQuestions, onAsk, onClose }: { person: InterviewTarget; askedQuestions: string[]; onAsk: (person: InterviewTarget, question: InterviewQuestion) => void; onClose: () => void }) {
+  const interview = interviews[person];
+  return (
+    <div className="veil-modal-backdrop" onClick={onClose}>
+      <div className="veil-modal interview-modal" onClick={(event) => event.stopPropagation()}>
+        <button className="modal-close" onClick={onClose} aria-label="Fechar"><X size={18} /></button>
+        <p className="veil-kicker">INTERROGATÓRIO // SAMUEL CROWE</p>
+        <h2 className="mt-3 font-serif text-3xl text-[var(--veil-paper)]">{person}</h2>
+        <p className="mt-1 text-sm text-[var(--veil-gold)]">{interview.role}</p>
+        <p className="mt-5 border-l-2 border-[var(--veil-gold)] pl-4 text-sm leading-7 text-[var(--veil-muted)]">{interview.summary}</p>
+        <div className="mt-7 space-y-2">
+          {interview.questions.map((question) => {
+            const key = person + ":" + question.id;
+            const asked = askedQuestions.includes(key);
+            return (
+              <div key={question.id} className="interview-question">
+                <button className="question-button" onClick={() => onAsk(person, question)}>
+                  <span>{question.label}</span>
+                  <ChevronRight size={15} />
+                </button>
+                {asked && (
+                  <div className="interview-response">
+                    <span className="response-speaker">{person}</span>
+                    <p>{question.response}</p>
+                    {question.unlockClue && <small>Nova informação registrada no caderno.</small>}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <button className="veil-secondary-button mt-7" onClick={onClose}>ENCERRAR INTERROGATÓRIO</button>
       </div>
     </div>
   );
