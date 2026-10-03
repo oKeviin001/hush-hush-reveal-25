@@ -226,8 +226,22 @@ const initialClues: Clue[] = [
   {
     id: "daniel-rope",
     title: "Contradição da corda",
-    description: "Daniel nega ter entrado na cabine, mas a investigação da corda coloca alguém com acesso ao convés inferior perto da cabine durante a tempestade.",
+    description: "Daniel nega ter entrado na cabine, mas a corda molhada mostra movimentação recente junto à cabine durante a tempestade.",
     source: "Interrogatório de Daniel",
+    discovered: false,
+  },
+  {
+    id: "adrian-sequence",
+    title: "Sequência observada por Adrian",
+    description: "Adrian percebe que a sequência temporal é mais importante que qualquer mentira isolada: tempestade, movimentação interna, cabine e descoberta do corpo.",
+    source: "Análise de Adrian",
+    discovered: false,
+  },
+  {
+    id: "daniel-button",
+    title: "Botão de aprendiz",
+    description: "Ao comparar o botão com a roupa de Daniel, Adrian identifica o mesmo padrão de tecido.",
+    source: "Análise de Adrian",
     discovered: false,
   },
 ];
@@ -290,7 +304,15 @@ function Game() {
       discoverClue("route");
     }
     if (area === "Cordas") discoverClue("wet-rope");
-    if (area === "Cama") discoverClue("bed-button");
+    if (area === "Cama") {
+      discoverClue("bed-button");
+      if (visitedAreas.includes("Cama") || clues.some((clue) => clue.id === "daniel-access" && clue.discovered)) {
+        discoverClue("daniel-button");
+      }
+    }
+    if (area === "Janela" && clues.some((clue) => clue.id === "wet-rope" && clue.discovered)) {
+      discoverClue("adrian-sequence");
+    }
   }
 
   function askQuestion(person: InterviewTarget, question: InterviewQuestion) {
@@ -300,10 +322,12 @@ function Game() {
 
   function connectEvidence(id: string) {
     setConnections((current) => current.includes(id) ? current : [...current, id]);
+    if (id === "storm+wet-rope") discoverClue("adrian-sequence");
+    if (id === "daniel-knowledge+daniel-access") discoverClue("daniel-button");
   }
 
   function solveCase() {
-    const required = ["storm", "bed-button", "daniel-knowledge", "daniel-access"];
+    const required = ["storm", "bed-button", "daniel-knowledge", "daniel-access", "daniel-button"];
     if (required.every((id) => clues.some((clue) => clue.id === id && clue.discovered))) {
       setStatus("solved");
       setEndingOpen(true);
@@ -988,6 +1012,8 @@ function Journal({
               ["route", "Helena Graves", "A rota alterada prova uma mentira, mas não prova o assassinato."],
               ["daniel-knowledge", "Daniel Cross", "Daniel sabia que Elias investigava os registros antes de isso ser divulgado."],
               ["daniel-access", "Daniel Cross", "Daniel conhece a rotina da cabine apesar de negar motivo para isso."],
+              ["daniel-button", "Daniel Cross", "O botão encontrado na cama corresponde ao padrão da roupa de aprendiz."],
+              ["adrian-sequence", "Adrian Vale", "A sequência temporal conecta a tempestade, a movimentação interna e a cabine."],
             ].map(([id, title, text], index) => (
               <article key={id} className="journal-entry">
                 <span className="journal-index">{String(index + 1).padStart(2, "0")}</span>
