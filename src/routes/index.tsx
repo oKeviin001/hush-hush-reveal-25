@@ -102,7 +102,7 @@ function Game() {
   function inspect(next:Scene){setScene(next);setVisited(v=>v.includes(next)?v:[...v,next]);sceneClues[next].forEach(discover);if(next==="Galeria"&&visited.length>=3)discover("sequence");if(next==="Restauro"&&has("m17"))discover("sequence");}
   function ask(p:Suspect,q:Question){const k=p+":"+q.id;setAsked(a=>a.includes(k)?a:[...a,k]);if(q.clue)discover(q.clue);}
   function connect(id:string){setConnections(c=>c.includes(id)?c:[...c,id]);if(id==="blackout+key17"||id==="ledger+m17"||id==="clock+mara")discover("sequence");}
-  function solve(){const req=["blackout","ledger","clock","key17","solvent","mara-alibi","mara-knowledge","m17","sequence"];if(req.every(has)){setSolved(true);setEnding(true)}else{setJournal(true);setTab("hypotheses")}}
+  function solve(){const req=["blackout","ledger","clock","key17","solvent","bronze","mara-alibi","mara-knowledge","m17","sequence"];const links=["blackout+key17","ledger+m17","clock+mara"];if(req.every(has)&&links.every((id)=>connections.includes(id))){setSolved(true);setEnding(true)}else{setJournal(true);setTab("hypotheses")}}
   function reset(){setClues(initialClues);setVisited([]);setAsked([]);setConnections([]);setSolved(false);setEnding(false);localStorage.removeItem(STORAGE_KEY)}
   if(view==="cases")return <Shell eyebrow="ARQUIVOS"><Cases onOpen={()=>setView("briefing")}/></Shell>;
   if(view==="briefing")return <Shell eyebrow="CASE 01 // BRIEFING" showBack onBack={()=>setView("cases")}><Briefing onStart={()=>setView("investigation")}/></Shell>;
