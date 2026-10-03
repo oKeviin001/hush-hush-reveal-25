@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   BookOpen,
@@ -38,8 +38,11 @@ export const Route = createFileRoute("/")({
 });
 
 type View = "cases" | "briefing" | "investigation";
-type InterviewTarget = "Marcus Rook" | "Helena Graves" | "Tobias Flint" | "Rowan Pike";
-type JournalTab = "clues" | "suspects" | "timeline";
+type InterviewTarget = "Marcus Rook" | "Helena Graves" | "Tobias Flint" | "Rowan Pike" | "Daniel Cross";
+type JournalTab = "clues" | "suspects" | "contradictions" | "hypotheses" | "timeline";
+type GameStatus = "investigating" | "solved";
+
+const STORAGE_KEY = "veilorius-case-01-state-v2";
 
 type InterviewQuestion = {
   id: string;
@@ -125,6 +128,16 @@ const interviews: Record<InterviewTarget, Interview> = {
       { id: "captain", label: "Por que esconder o reparo?", response: "Eu tinha medo de ser responsabilizado pela falha.", requires: ["tools"] },
     ],
   },
+  "Daniel Cross": {
+    role: "Aprendiz",
+    summary: "Quase sempre passa despercebido. Elias, porém, vinha observando seus movimentos.",
+    questions: [
+      { id: "where", label: "Onde você estava quando a tempestade começou?", response: "No convés inferior, ajudando com as amarras." },
+      { id: "captain", label: "Quando foi a última vez que falou com Elias?", response: "Antes da tempestade. Ele me perguntou sobre os registros de carga.", unlockClue: "daniel-knowledge" },
+      { id: "cabin", label: "Você sabia onde Elias guardava seus registros?", response: "Não. Eu não tinha motivo para saber disso.", unlockClue: "daniel-access", requires: ["captain"] },
+      { id: "rope", label: "Você tocou nas cordas da cabine naquela noite?", response: "Não. Não entrei na cabine.", unlockClue: "daniel-rope", requires: ["cabin"] },
+    ],
+  },
 };
 
 const initialClues: Clue[] = [
@@ -188,6 +201,34 @@ const initialClues: Clue[] = [
     source: "Interrogatório de Rowan",
     discovered: false,
   },
+  {
+    id: "bed-button",
+    title: "Botão preso no tecido",
+    description: "Um pequeno botão ficou preso na cama. O formato não combina com o uniforme dos quatro suspeitos iniciais.",
+    source: "Cama",
+    discovered: false,
+  },
+  {
+    id: "daniel-knowledge",
+    title: "Conhecimento indevido",
+    description: "Daniel sabia que Elias estava verificando os registros de carga antes que essa informação fosse divulgada publicamente.",
+    source: "Interrogatório de Daniel",
+    discovered: false,
+  },
+  {
+    id: "daniel-access",
+    title: "Acesso à cabine",
+    description: "Daniel conhece a rotina e os locais onde Elias guardava documentos, embora diga que não deveria saber disso.",
+    source: "Interrogatório de Daniel",
+    discovered: false,
+  },
+  {
+    id: "daniel-rope",
+    title: "Contradição da corda",
+    description: "Daniel nega ter entrado na cabine, mas a investigação da corda coloca alguém com acesso ao convés inferior perto da cabine durante a tempestade.",
+    source: "Interrogatório de Daniel",
+    discovered: false,
+  },
 ];
 
 function Game() {
@@ -200,6 +241,30 @@ function Game() {
   const [visitedAreas, setVisitedAreas] = useState<string[]>([]);
   const [interviewTarget, setInterviewTarget] = useState<InterviewTarget | null>(null);
   const [askedQuestions, setAskedQuestions] = useState<string[]>([]);
+  const [connections, setConnections] = useState<string[]>([]);
+  const [status, setStatus] = useState<GameStatus>("investigating");
+  const [endingOpen, setEndingOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(STORAGE_KEY);
+      if (!saved) return;
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed.clues)) setClues(parsed.clues);
+      if (Array.isArray(parsed.visitedAreas)) setVisitedAreas(parsed.visitedAreas);
+      if (Array.isArray(parsed.askedQuestions)) setAskedQuestions(parsed.askedQuestions);
+      if (Array.isArray(parsed.connections)) setConnections(parsed.connections);
+      if (parsed.status === "solved") setStatus("solved");
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        clues, visitedAreas, askedQuestions, connections, status,
+      }));
+    } catch {}
+  }, [clues, visitedAreas, askedQuestions, connections, status]);
 
   const discoveredCount = clues.filter((clue) => clue.discovered).length;
   const discoveredClues = useMemo(
@@ -224,11 +289,37 @@ function Game() {
       discoverClue("route");
     }
     if (area === "Cordas") discoverClue("wet-rope");
+    if (area === "Cama") discoverClue("bed-button");
   }
 
   function askQuestion(person: InterviewTarget, question: InterviewQuestion) {
     setAskedQuestions((current) => current.includes(person + ":" + question.id) ? current : [...current, person + ":" + question.id]);
     if (question.unlockClue) discoverClue(question.unlockClue);
+  }
+
+  function connectEvidence(id: string) {
+    setConnections((current) => current.includes(id) ? current : [...current, id]);
+  }
+
+  function solveCase() {
+    const required = ["storm", "bed-button", "daniel-knowledge", "daniel-access"];
+    if (required.every((id) => clues.some((clue) => clue.id === id && clue.discovered))) {
+      setStatus("solved");
+      setEndingOpen(true);
+      return;
+    }
+    setJournalOpen(true);
+    setJournalTab("hypotheses");
+  }
+
+  function resetCase() {
+    setClues(initialClues);
+    setVisitedAreas([]);
+    setAskedQuestions([]);
+    setConnections([]);
+    setStatus("investigating");
+    setEndingOpen(false);
+    try { window.localStorage.removeItem(STORAGE_KEY); } catch {}
   }
 
   if (view === "investigation") {
@@ -247,6 +338,11 @@ function Game() {
         onAskQuestion={askQuestion}
         onBack={() => setView("briefing")}
         onJournal={() => setJournalOpen(true)}
+        connections={connections}
+        onConnect={connectEvidence}
+        status={status}
+        onSolve={solveCase}
+        onReset={resetCase}
       >
         {journalOpen && (
           <Journal
@@ -468,6 +564,11 @@ function InvestigationView({
   onAskQuestion,
   onBack,
   onJournal,
+  connections,
+  onConnect,
+  status,
+  onSolve,
+  onReset,
 }: {
   children: React.ReactNode;
   discoveredCount: number;
@@ -483,6 +584,11 @@ function InvestigationView({
   onAskQuestion: (person: InterviewTarget, question: InterviewQuestion) => void;
   onBack: () => void;
   onJournal: () => void;
+  connections: string[];
+  onConnect: (id: string) => void;
+  status: GameStatus;
+  onSolve: () => void;
+  onReset: () => void;
 }) {
   const areas = ["Mesa", "Janela", "Porta", "Armário", "Cama", "Cordas"];
 
@@ -557,7 +663,7 @@ function InvestigationView({
             <div className="veil-sidebar-block">
               <p className="veil-kicker">PESSOAS A BORDO</p>
               <div className="mt-4 max-h-72 space-y-1 overflow-auto pr-1">
-                {crew.slice(0, 10).map(([name, role]) => (
+                {crew.map(([name, role]) => (
                   <button
                     key={name}
                     className="person-row"
@@ -567,24 +673,72 @@ function InvestigationView({
                       <strong>{name}</strong>
                       <small>{role}</small>
                     </span>
-                    {(["Marcus Rook", "Helena Graves", "Tobias Flint", "Rowan Pike"] as string[]).includes(name) ? <MessageSquareText size={14} /> : <ChevronRight size={14} />}
+                    {(["Marcus Rook", "Helena Graves", "Tobias Flint", "Rowan Pike", "Daniel Cross"] as string[]).includes(name) ? <MessageSquareText size={14} /> : <ChevronRight size={14} />}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="veil-sidebar-block hidden sm:block">
+            <div className="veil-sidebar-block">
+              <p className="veil-kicker">CONECTAR EVIDÊNCIAS</p>
+              <div className="mt-4 space-y-2">
+                <button
+                  className="clue-row text-left"
+                  disabled={!clues.some((c) => c.id === "storm") || !clues.some((c) => c.id === "wet-rope")}
+                  onClick={() => onConnect("storm+wet-rope")}
+                >
+                  <Link2 size={14} />
+                  <span>Temporal + corda molhada</span>
+                </button>
+                <button
+                  className="clue-row text-left"
+                  disabled={!clues.some((c) => c.id === "daniel-knowledge") || !clues.some((c) => c.id === "daniel-access")}
+                  onClick={() => onConnect("daniel-knowledge+daniel-access")}
+                >
+                  <Link2 size={14} />
+                  <span>Conhecimento + acesso de Daniel</span>
+                </button>
+              </div>
+              <p className="mt-3 text-xs text-[var(--veil-dim)]">Conexões registradas: {connections.length}</p>
+            </div>
+
+            <div className="veil-sidebar-block">
               <p className="veil-kicker">ADRIAN & SAMUEL</p>
               <p className="mt-3 text-sm leading-6 text-[var(--veil-muted)]">
-                Dois investigadores. Duas formas de perceber uma mentira.
+                Adrian observa a sequência. Samuel pressiona as respostas.
               </p>
+              <div className="mt-3 grid gap-2">
+                <div className="person-row"><span><strong>Adrian Vale</strong><small>Investigador / analista</small></span></div>
+                <div className="person-row"><span><strong>Samuel Crowe</strong><small>Investigador / interrogador</small></span></div>
+              </div>
             </div>
           </aside>
         </div>
       </section>
 
+      <div className="mx-auto flex w-full max-w-7xl flex-wrap gap-2 px-4 pb-8 sm:px-8">
+        <button className="veil-secondary-button" onClick={onSolve}>
+          {status === "solved" ? "CASO RESOLVIDO" : "VERIFICAR HIPÓTESE"}
+        </button>
+        <button className="veil-secondary-button" onClick={onReset}>REINICIAR CASO</button>
+      </div>
+
+      {status === "solved" && (
+        <div className="mx-auto mb-8 w-full max-w-7xl px-4 sm:px-8">
+          <div className="veil-paper border-l-2 border-[var(--veil-gold)] p-5">
+            <p className="veil-kicker">HIPÓTESE CONFIRMADA</p>
+            <p className="mt-2 font-serif text-xl text-[var(--veil-paper)]">Daniel Cross é o infiltrado.</p>
+            <p className="mt-2 text-sm leading-6 text-[var(--veil-muted)]">Conhecimento indevido + acesso à cabine enfraquecem as versões dos demais e sustentam a conclusão.</p>
+          </div>
+        </div>
+      )}
+
       {selectedArea && (
-        <AreaModal area={selectedArea} onClose={() => onInspect("")} />
+        <AreaModal
+          area={selectedArea}
+          discoveredIds={clues.map((clue) => clue.id)}
+          onClose={() => onInspect("")}
+        />
       )}
       {selectedPerson && (
         <PersonModal person={selectedPerson} onClose={() => onPerson(null)} onInterview={(person) => { onPerson(null); onInterview(person); }} />
@@ -593,16 +747,22 @@ function InvestigationView({
         <InterviewModal person={interviewTarget} askedQuestions={askedQuestions} onAsk={onAskQuestion} onClose={() => onInterview(null)} />
       )}
       {children}
+      {endingOpen && <EndingModal onClose={() => setEndingOpen(false)} onReset={onReset} />}
     </Shell>
   );
 }
 
-function AreaModal({ area, onClose }: { area: string; onClose: () => void }) {
+function AreaModal({ area, discoveredIds, onClose }: { area: string; discoveredIds: string[]; onClose: () => void }) {
+  const has = (id: string) => discoveredIds.includes(id);
   const content: Record<string, { title: string; text: string; note: string }> = {
     Mesa: {
       title: "A mesa",
-      text: "A superfície está coberta por cartas náuticas e documentos. Um risco recente corta a madeira. Uma das cartas parece ter sido alterada.",
-      note: "Nova interpretação pode surgir quando outras evidências forem descobertas.",
+      text: has("daniel-knowledge")
+        ? "A superfície está coberta por cartas e registros. Depois do interrogatório, fica claro que Daniel conhecia uma investigação que Elias mantinha discreta."
+        : "A superfície está coberta por cartas náuticas e documentos. Um risco recente corta a madeira. Uma das cartas parece ter sido alterada.",
+      note: has("route")
+        ? "A rota alterada explica uma mentira de Helena, mas não explica a morte."
+        : "A carta deve ser revisitada depois que outros depoimentos forem comparados.",
     },
     Cordas: {
       title: "As cordas",
@@ -611,8 +771,12 @@ function AreaModal({ area, onClose }: { area: string; onClose: () => void }) {
     },
     Janela: {
       title: "A janela",
-      text: "A chuva golpeia o vidro. Lá fora, o mar é quase impossível de enxergar através da tempestade.",
-      note: "Nenhum navio deveria conseguir se aproximar nestas condições.",
+      text: has("storm")
+        ? "A chuva golpeia o vidro. O mar está impraticável. A tempestade torna a aproximação de outro navio extremamente improvável."
+        : "A chuva golpeia o vidro. Lá fora, o mar é quase impossível de enxergar através da tempestade.",
+      note: has("wet-rope")
+        ? "Com a corda molhada, a investigação passa a considerar movimentação interna no navio."
+        : "Volte aqui depois de examinar as cordas.",
     },
     Porta: {
       title: "A porta",
@@ -626,8 +790,12 @@ function AreaModal({ area, onClose }: { area: string; onClose: () => void }) {
     },
     Cama: {
       title: "A cama",
-      text: "A cama está parcialmente desarrumada. Um pequeno botão está preso no tecido.",
-      note: "O botão não foi registrado como evidência principal ainda.",
+      text: has("bed-button")
+        ? "A cama está parcialmente desarrumada. O botão preso no tecido não combina com os uniformes dos quatro suspeitos iniciais."
+        : "A cama está parcialmente desarrumada. Um pequeno botão está preso no tecido.",
+      note: has("daniel-access")
+        ? "Depois de descobrir o acesso de Daniel, o botão deixa de parecer um detalhe casual."
+        : "Revisite esta área depois de descobrir quem conhecia a rotina da cabine.",
     },
   };
 
@@ -668,7 +836,7 @@ function PersonModal({ person, onClose, onInterview }: { person: string; onClose
           Você ainda não sabe o suficiente sobre esta pessoa. Isso não significa
           que ela seja inocente — apenas que a investigação ainda não terminou.
         </p>
-        {(["Marcus Rook", "Helena Graves", "Tobias Flint", "Rowan Pike"] as string[]).includes(person) && (
+        {(["Marcus Rook", "Helena Graves", "Tobias Flint", "Rowan Pike", "Daniel Cross"] as string[]).includes(person) && (
           <button className="veil-primary-button mt-7 w-full" onClick={() => onInterview(person as InterviewTarget)}>
             INTERROGAR <MessageSquareText size={16} />
           </button>
@@ -748,6 +916,8 @@ function Journal({
           {([
             ["clues", "Pistas"],
             ["suspects", "Suspeitos"],
+            ["contradictions", "Contradições"],
+            ["hypotheses", "Hipóteses"],
             ["timeline", "Linha do tempo"],
           ] as const).map(([value, label]) => (
             <button
@@ -795,6 +965,38 @@ function Journal({
           </div>
         )}
 
+        {tab === "contradictions" && (
+          <div className="journal-list">
+            {[
+              ["storm", "Ataque externo", "A tempestade e a ausência de arrombamento enfraquecem a hipótese externa."],
+              ["route", "Helena Graves", "A rota alterada prova uma mentira, mas não prova o assassinato."],
+              ["daniel-knowledge", "Daniel Cross", "Daniel sabia que Elias investigava os registros antes de isso ser divulgado."],
+              ["daniel-access", "Daniel Cross", "Daniel conhece a rotina da cabine apesar de negar motivo para isso."],
+            ].map(([id, title, text], index) => (
+              <article key={id} className="journal-entry">
+                <span className="journal-index">{String(index + 1).padStart(2, "0")}</span>
+                <div><h3>{title}</h3><p>{text}</p><small>{clues.some((clue) => clue.id === id) ? "Pista registrada" : "Aguardando evidência"}</small></div>
+              </article>
+            ))}
+          </div>
+        )}
+
+        {tab === "hypotheses" && (
+          <div className="journal-list">
+            {[
+              ["Ataque externo", "Hipótese enfraquecida", "O temporal torna a aproximação externa improvável."],
+              ["Alguém dentro do navio", "Em investigação", "As evidências agora apontam para dentro."],
+              ["Responsável tinha acesso à cabine", "Em investigação", "Acesso e rotina da cabine são centrais."],
+              ["Daniel Cross é o infiltrado", clues.some((c) => c.id === "daniel-access") ? "Hipótese fortalecida" : "Em investigação", "Conhecimento indevido + acesso formam a linha principal de investigação."],
+            ].map(([title, state, text], index) => (
+              <article key={title} className="journal-entry">
+                <span className="journal-index">{String(index + 1).padStart(2, "0")}</span>
+                <div><h3>{title}</h3><small>{state}</small><p>{text}</p></div>
+              </article>
+            ))}
+          </div>
+        )}
+
         {tab === "timeline" && (
           <div className="journal-list">
             {[
@@ -812,6 +1014,34 @@ function Journal({
             ))}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function EndingModal({ onClose, onReset }: { onClose: () => void; onReset: () => void }) {
+  return (
+    <div className="veil-modal-backdrop" onClick={onClose}>
+      <div className="veil-modal" onClick={(event) => event.stopPropagation()}>
+        <button className="modal-close" onClick={onClose} aria-label="Fechar"><X size={18} /></button>
+        <p className="veil-kicker">CASE 01 // CONCLUSÃO</p>
+        <h2 className="mt-3 font-serif text-4xl text-[var(--veil-paper)]">O Último Temporal</h2>
+        <p className="mt-6 text-base leading-8 text-[var(--veil-muted)]">
+          A investigação descarta o ataque externo e separa as mentiras dos quatro suspeitos iniciais de uma intenção homicida.
+        </p>
+        <div className="mt-7 border-l-2 border-[var(--veil-gold)] pl-4">
+          <p className="font-serif text-xl text-[var(--veil-paper)]">Daniel Cross — o infiltrado.</p>
+          <p className="mt-2 text-sm leading-7 text-[var(--veil-muted)]">
+            A conclusão nasce da combinação entre conhecimento que ele não deveria possuir, acesso à cabine e os detalhes encontrados na cena.
+          </p>
+        </div>
+        <p className="mt-6 text-sm leading-7 text-[var(--veil-muted)]">
+          A hipótese é confirmada pela lógica apresentada ao jogador, não por uma revelação externa à investigação.
+        </p>
+        <div className="mt-8 flex flex-wrap gap-2">
+          <button className="veil-primary-button" onClick={onClose}>VOLTAR AO CADERNO</button>
+          <button className="veil-secondary-button" onClick={onReset}>RECOMEÇAR CASO</button>
+        </div>
       </div>
     </div>
   );
