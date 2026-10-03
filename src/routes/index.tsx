@@ -499,7 +499,7 @@ function InvestigationView({
           <div className="veil-progress">
             <span>PISTAS</span>
             <strong>{discoveredCount}</strong>
-            <span>/ 4</span>
+            <span>/ 8</span>
           </div>
         </div>
 
