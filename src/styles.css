@@ -149,3 +149,10 @@
     color: var(--color-foreground);
   }
 }
+
+/* Coming Soon landing page */
+.soon-title {
+  font-size: clamp(2.75rem, 9vw, 7rem);
+  line-height: 1.05;
+  letter-spacing: 0.08em;
+}
