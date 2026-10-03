@@ -992,6 +992,7 @@ function Journal({
               ["Helena Graves", "Navegadora", "A rota apresenta inconsistências."],
               ["Tobias Flint", "Cozinheiro", "Existem problemas nos horários."],
               ["Rowan Pike", "Contramestre", "Foi visto onde não deveria estar."],
+              ["Daniel Cross", "Aprendiz", "Seu conhecimento sobre a investigação e seu acesso levantam a questão central."],
             ].map(([name, role, note], index) => (
               <article key={name} className="journal-entry">
                 <span className="journal-index">{String(index + 1).padStart(2, "0")}</span>
