@@ -706,6 +706,18 @@ function InvestigationView({
               <p className="mt-3 text-xs text-[var(--veil-dim)]">Conexões registradas: {connections.length}</p>
             </div>
 
+            {visitedAreas.length >= 6 && discoveredCount >= 8 && (
+              <div className="veil-sidebar-block">
+                <p className="veil-kicker">NOTA ENCONTRADA</p>
+                <p className="mt-3 font-serif text-sm italic leading-6 text-[var(--veil-paper)]">
+                  “Você já viu isso antes. Só não tinha percebido o que significava.”
+                </p>
+                <small className="mt-2 block text-[10px] uppercase tracking-[0.12em] text-[var(--veil-dim)]">
+                  17:42 // arquivo sem assinatura
+                </small>
+              </div>
+            )}
+
             <div className="veil-sidebar-block">
               <p className="veil-kicker">ADRIAN & SAMUEL</p>
               <p className="mt-3 text-sm leading-6 text-[var(--veil-muted)]">
