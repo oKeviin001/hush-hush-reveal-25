@@ -821,3 +821,38 @@
   letter-spacing: .08em;
   text-transform: uppercase;
 }
+
+
+/* VEILØRIS polish: every investigation action has a clear visual response */
+.scene-hotspot { animation: veil-pulse 3.8s ease-in-out infinite; }
+.scene-hotspot:nth-of-type(2n) { animation-delay: -.9s; }
+.clue-row, .person-row, .question-button, .veil-primary-button, .veil-secondary-button, .modal-close {
+  will-change: transform, background-color, border-color;
+}
+.clue-row:active, .person-row:active, .question-button:active,
+.veil-primary-button:active, .veil-secondary-button:active { transform: translateY(1px); }
+.veil-modal-backdrop { animation: veil-fade-in .16s ease-out both; }
+.veil-modal, .veil-journal { animation: veil-rise-in .2s ease-out both; }
+.interview-response { animation: veil-reveal .22s ease-out both; }
+
+@keyframes veil-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes veil-rise-in {
+  from { opacity: 0; transform: translateY(10px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes veil-reveal {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes veil-pulse {
+  0%, 100% { box-shadow: 0 0 0 oklch(0.72 0.105 76 / 0%); }
+  50% { box-shadow: 0 0 18px oklch(0.72 0.105 76 / 10%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .scene-hotspot, .veil-modal-backdrop, .veil-modal, .veil-journal, .interview-response {
+    animation: none;
+  }
+}
