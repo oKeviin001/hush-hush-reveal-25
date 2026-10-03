@@ -92,7 +92,7 @@ const interviews: Record<InterviewTarget, Interview> = {
       { id: "where", label: "Onde você estava quando a tempestade começou?", response: "Na área de comando. Eu estava conferindo a tripulação." },
       { id: "fight", label: "Por que você discutiu com Elias?", response: "Eu queria afastar algumas pessoas da tripulação. Elias não concordou." },
       { id: "cargo", label: "O que você estava escondendo dele?", response: "Irregularidades na carga. Eu pretendia resolver aquilo antes de envolver o capitão.", unlockClue: "marcus-cargo" },
-      { id: "alone", label: "Você entrou na cabine de Elias?", response: "Não depois da discussão. Não naquela noite." },
+      { id: "alone", label: "Você entrou na cabine de Elias?", response: "Não depois da discussão. Não naquela noite.", requires: ["cargo"] },
     ],
   },
   "Helena Graves": {
@@ -102,7 +102,7 @@ const interviews: Record<InterviewTarget, Interview> = {
       { id: "where", label: "Onde você estava quando a tempestade começou?", response: "Na sala de navegação." },
       { id: "alone", label: "Você estava sozinha?", response: "Sim. Pelo menos durante a maior parte do tempo." },
       { id: "route", label: "A carta náutica foi alterada?", response: "Houve uma alteração na rota. Eu não queria que todos soubessem onde estivemos antes da tempestade.", unlockClue: "helena-route" },
-      { id: "shadow", label: "Você viu alguém perto da cabine?", response: "Vi uma sombra no corredor. Não consegui identificar quem era." },
+      { id: "shadow", label: "Você viu alguém perto da cabine?", response: "Vi uma sombra no corredor. Não consegui identificar quem era.", requires: ["route"] },
     ],
   },
   "Tobias Flint": {
@@ -112,7 +112,7 @@ const interviews: Record<InterviewTarget, Interview> = {
       { id: "where", label: "Onde você estava?", response: "Na cozinha. Preparando comida para a tripulação." },
       { id: "bottles", label: "Por que algumas garrafas desapareceram?", response: "Eu estava guardando bebida que não deveria estar ali. Era um pequeno esquema de contrabando.", unlockClue: "tobias-smuggling" },
       { id: "time", label: "Você saiu da cozinha?", response: "Por alguns minutos. Não queria que descobrissem o que eu estava fazendo." },
-      { id: "captain", label: "Você encontrou Elias naquela noite?", response: "Não. E não tenho motivo para mentir sobre isso." },
+      { id: "captain", label: "Você encontrou Elias naquela noite?", response: "Não. E não tenho motivo para mentir sobre isso.", requires: ["bottles"] },
     ],
   },
   "Rowan Pike": {
@@ -122,7 +122,7 @@ const interviews: Record<InterviewTarget, Interview> = {
       { id: "where", label: "Onde você estava durante a tempestade?", response: "Perto do compartimento de ferramentas." },
       { id: "tools", label: "Por que estava ali?", response: "Uma parte do navio estava danificada. Eu estava tentando consertá-la em segredo.", unlockClue: "rowan-repair" },
       { id: "access", label: "Você tinha acesso às ferramentas?", response: "Sim. Era meu trabalho. Isso não significa que usei alguma delas contra Elias." },
-      { id: "captain", label: "Por que esconder o reparo?", response: "Eu tinha medo de ser responsabilizado pela falha." },
+      { id: "captain", label: "Por que esconder o reparo?", response: "Eu tinha medo de ser responsabilizado pela falha.", requires: ["tools"] },
     ],
   },
 };
@@ -693,7 +693,7 @@ function InterviewModal({ person, askedQuestions, onAsk, onClose }: { person: In
         <p className="mt-1 text-sm text-[var(--veil-gold)]">{interview.role}</p>
         <p className="mt-5 border-l-2 border-[var(--veil-gold)] pl-4 text-sm leading-7 text-[var(--veil-muted)]">{interview.summary}</p>
         <div className="mt-7 space-y-2">
-          {interview.questions.map((question) => {
+          {interview.questions.filter((question) => !question.requires || question.requires.every((required) => askedQuestions.includes(person + ":" + required))).map((question) => {
             const key = person + ":" + question.id;
             const asked = askedQuestions.includes(key);
             return (
