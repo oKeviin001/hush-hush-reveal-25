@@ -28,12 +28,11 @@ function ComingSoon() {
           VEILØRIS VEM AÍ!! VOCÊ ESTÁ PRONTO?
         </h1>
         <img
-          src="/veilorius-poster.jpg"
-          alt="Duas pessoas procurando pistas com uma lupa em um cenário de investigação"
-          className="h-auto w-full max-w-2xl rounded-2xl object-cover shadow-2xl"
+          src="/veilorius-investigation.svg"
+          alt="Duas pessoas investigando uma pista com uma grande lupa"
+          className="h-auto w-full max-w-2xl rounded-2xl shadow-2xl"
         />
       </div>
     </div>
   );
 }
-
