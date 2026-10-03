@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, BookOpen, ChevronRight, Clock3, FileSearch, LockKeyhole, Link2, MessageSquareText, ShieldAlert, Skull, Sparkles, Users, X } from "lucide-react";
+import { ArrowLeft, BookOpen, ChevronRight, Clock3, FileSearch, LockKeyhole, Link2, ShieldAlert, Sparkles, Users, X } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [
