@@ -501,7 +501,7 @@ function update(dt) {
         if (e.t < 0.65) { e.aimX = tgt.x; e.aimZ = tgt.z; }
         if (e.t > 0.95) {
           const ax = e.aimX - e.x, az = e.aimZ - e.z, al = Math.hypot(ax, az) || 1, sp = 21, ft = al / sp;
-          arrows.push({ x: e.x + ax / al * 0.5, y: 1.3, z: e.z + az / al * 0.5, vx: ax / al * sp, vy: (-1.3 + 0.5 * 9 * ft * ft) / ft, vz: az / al * sp, life: 3, stuck: 0, trail: [] });
+          arrows.push({ x: e.x + ax / al * 0.5, y: 1.3, z: e.z + az / al * 0.5, vx: ax / al * sp, vy: (-1.3 + 0.5 * 9 * ft * ft) / ft, vz: az / al * sp, life: 3, stuck: 0, trail: [], sdx: 0, sdy: -1, sdz: 0 });
           e.state = "recover"; e.t = 0;
         }
       } else if (e.state === "recover") { if (e.t > 0.45) { e.state = "move"; e.cd = 1.4 + Math.random() * 0.8; } }
