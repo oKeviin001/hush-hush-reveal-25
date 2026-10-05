@@ -241,6 +241,7 @@ for(const q of traps){const p=projectWorld(q.x,q.y,3);if(p.depth<0)continue;cons
   ctx.restore();
   ctx.fillStyle="#61df83";ctx.fillRect(p.x-z,p.y-z*.02,z*2*Math.max(0,e.hp/e.maxHp),5);
 }
+}
 function drawProjectiles(){
 ctx.save();
 for(const p of projectiles){const q=projectWorld(p.x,p.y,28);if(q.depth<0)continue;const r=Math.max(4,12*q.scale);const g=ctx.createRadialGradient(q.x,q.y,1,q.x,q.y,r*2.8);g.addColorStop(0,"#e9ffff");g.addColorStop(.25,"#61d7ff");g.addColorStop(.6,"#705bff");g.addColorStop(1,"rgba(70,60,255,0)");ctx.fillStyle=g;ctx.beginPath();ctx.arc(q.x,q.y,r*2.8,0,Math.PI*2);ctx.fill();ctx.fillStyle="#e8ffff";ctx.beginPath();ctx.arc(q.x,q.y,r,0,Math.PI*2);ctx.fill()}for(const a of enemyProjectiles){
