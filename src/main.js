@@ -53,9 +53,9 @@ const skills = [...document.querySelectorAll(".skill")];
 const hpFill=document.querySelector("#hpFill"),hpText=document.querySelector("#hpText");
 
 const world = { width: 4200, height: 3000 };
-const player = { x: world.width / 2, y: world.height / 2, speed: 4.8, angle: 0 };
+const player = { x: world.width / 2, y: world.height / 2, speed: 6.2, angle: 0 };
 const input = { x: 0, y: 0, keys: new Set() };
-const camera = { x: player.x, y: player.y };
+const camera = { x: player.x, y: player.y, angle: 0 };
 const aim = { x: 1, y: 0, active: false, pointer: null };
 const projectiles=[];
 const enemies=[
@@ -189,8 +189,8 @@ skills.forEach(btn => {
 addEventListener("keydown", e => input.keys.add(e.key.toLowerCase()));
 addEventListener("keyup", e => input.keys.delete(e.key.toLowerCase()));
 
-function cameraBasis(){const forward={x:Math.cos(player.angle),y:Math.sin(player.angle)};const right={x:-forward.y,y:forward.x};return{forward,right}}
-function projectWorld(x,y,height=0){const{forward,right}=cameraBasis();const dx=x-player.x,dy=y-player.y;const depth=dx*forward.x+dy*forward.y;const lateral=dx*right.x+dy*right.y;const horizon=innerHeight*.36;const focal=Math.min(innerWidth,innerHeight)*.78;const scale=focal/Math.max(180,depth+520);return{x:innerWidth/2+lateral*scale,y:horizon+innerHeight*.32*(depth/900)-height*scale,scale,depth}}
+function cameraBasis(){const forward={x:Math.cos(camera.angle),y:Math.sin(camera.angle)};const right={x:-forward.y,y:forward.x};return{forward,right}}
+function projectWorld(x,y,height=0){const{forward,right}=cameraBasis();const dx=x-camera.x,dy=y-camera.y;const depth=dx*forward.x+dy*forward.y;const lateral=dx*right.x+dy*right.y;const horizon=innerHeight*.36;const focal=Math.min(innerWidth,innerHeight)*.78;const scale=focal/Math.max(180,depth+520);return{x:innerWidth/2+lateral*scale,y:horizon+innerHeight*.32*(depth/900)-height*scale,scale,depth}}
 
 function drawBackground(t){
  const w=innerWidth,h=innerHeight;const sky=ctx.createLinearGradient(0,0,0,h);sky.addColorStop(0,"#7fc9ed");sky.addColorStop(.38,"#bfe4d1");sky.addColorStop(.58,"#e8d49c");sky.addColorStop(1,"#7aa889");ctx.fillStyle=sky;ctx.fillRect(0,0,w,h);
@@ -207,7 +207,9 @@ function drawBackground(t){
 }
 
 function drawJugo(t){
- const sx=innerWidth/2,sy=innerHeight*.78,moving=Math.hypot(input.x,input.y)>.08||input.keys.size;ctx.save();ctx.translate(sx,sy);if(playerStats.ultimate){ctx.shadowBlur=38;ctx.shadowColor="#ff9a4d";ctx.scale(1.5,1.5);ctx.rotate(Math.sin(t/100)*.025)}ctx.translate(0,moving?Math.sin(t/75)*2.5:Math.sin(t/900));
+ const motionX=(player.x-camera.x)*.42;
+ const motionY=(player.y-camera.y)*.18;
+ const sx=innerWidth/2+motionX,sy=innerHeight*.78+motionY,moving=Math.hypot(input.x,input.y)>.08||input.keys.size;ctx.save();ctx.translate(sx,sy);if(playerStats.ultimate){ctx.shadowBlur=38;ctx.shadowColor="#ff9a4d";ctx.scale(1.5,1.5);ctx.rotate(Math.sin(t/100)*.025)}ctx.translate(0,moving?Math.sin(t/75)*4.5:Math.sin(t/900));
  ctx.fillStyle="rgba(0,0,0,.58)";ctx.beginPath();ctx.ellipse(0,25,62,18,0,0,Math.PI*2);ctx.fill();
  for(let i=0;i<6;i++){const a=t/1100+i*Math.PI/3,ox=Math.cos(a)*82,oy=Math.sin(a)*34-35;const g=ctx.createRadialGradient(ox,oy,1,ox,oy,25);g.addColorStop(0,"#b9f5ff");g.addColorStop(.25,"#426dff");g.addColorStop(1,"rgba(105,45,255,0)");ctx.fillStyle=g;ctx.beginPath();ctx.arc(ox,oy,25,0,Math.PI*2);ctx.fill();ctx.fillStyle="#58baff";ctx.beginPath();ctx.arc(ox,oy,9,0,Math.PI*2);ctx.fill()}
  ctx.scale(1.18,1.18);const body=ctx.createLinearGradient(-28,-70,35,65);body.addColorStop(0,"#b59aff");body.addColorStop(.4,"#315bc7");body.addColorStop(1,"#090f2c");ctx.fillStyle=body;ctx.beginPath();ctx.moveTo(0,-92);ctx.lineTo(31,-60);ctx.lineTo(38,18);ctx.lineTo(22,63);ctx.lineTo(8,52);ctx.lineTo(0,86);ctx.lineTo(-10,52);ctx.lineTo(-25,63);ctx.lineTo(-38,18);ctx.lineTo(-31,-60);ctx.closePath();ctx.fill();
@@ -254,7 +256,7 @@ for(const p of projectiles){const q=projectWorld(p.x,p.y,28);if(q.depth<0)contin
 }
 ctx.restore()}
 
-function update(dt){let x=input.x,y=input.y;if(playerStats.ultimate){playerStats.ultimateTime-=dt;if(playerStats.ultimateTime<=0){playerStats.ultimate=false;skills.forEach(b=>b.classList.remove("ultimate"))}}if(input.keys.has("w")||input.keys.has("arrowup"))y-=1;if(input.keys.has("s")||input.keys.has("arrowdown"))y+=1;if(input.keys.has("a")||input.keys.has("arrowleft"))x-=1;if(input.keys.has("d")||input.keys.has("arrowright"))x+=1;const l=Math.hypot(x,y);if(l>1){x/=l;y/=l}if(Math.hypot(x,y)>.08)player.angle=Math.atan2(y,x);player.x=clamp(player.x+x*player.speed*(playerStats.ultimate?1.12:1)*dt/16,90,world.width-90);player.y=clamp(player.y+y*player.speed*(playerStats.ultimate?1.12:1)*dt/16,90,world.height-90);camera.x+=(player.x-camera.x)*.09;camera.y+=(player.y-camera.y)*.09;for(const e of enemies){
+function update(dt){let x=input.x,y=input.y;if(playerStats.ultimate){playerStats.ultimateTime-=dt;if(playerStats.ultimateTime<=0){playerStats.ultimate=false;skills.forEach(b=>b.classList.remove("ultimate"))}}if(input.keys.has("w")||input.keys.has("arrowup"))y-=1;if(input.keys.has("s")||input.keys.has("arrowdown"))y+=1;if(input.keys.has("a")||input.keys.has("arrowleft"))x-=1;if(input.keys.has("d")||input.keys.has("arrowright"))x+=1;const l=Math.hypot(x,y);if(l>1){x/=l;y/=l}if(Math.hypot(x,y)>.08)player.angle=Math.atan2(y,x);player.x=clamp(player.x+x*player.speed*(playerStats.ultimate?1.12:1)*dt/16,90,world.width-90);player.y=clamp(player.y+y*player.speed*(playerStats.ultimate?1.12:1)*dt/16,90,world.height-90);const targetAngle=player.angle;let angleDelta=Math.atan2(Math.sin(targetAngle-camera.angle),Math.cos(targetAngle-camera.angle));camera.angle+=angleDelta*Math.min(1,dt/120);const camBack=170;const targetCamX=player.x-Math.cos(camera.angle)*camBack;const targetCamY=player.y-Math.sin(camera.angle)*camBack;camera.x+=(targetCamX-camera.x)*Math.min(1,dt/120);camera.y+=(targetCamY-camera.y)*Math.min(1,dt/120);for(const e of enemies){
   e.hit=Math.max(0,e.hit-dt);
   e.slow=Math.max(0,(e.slow||0)-dt/1000);
   e.attackCd-=dt;
