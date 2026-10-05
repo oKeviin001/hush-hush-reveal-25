@@ -56,8 +56,9 @@ const player = { x: world.width / 2, y: world.height / 2, speed: 4.8, angle: 0 }
 const input = { x: 0, y: 0, keys: new Set() };
 const camera = { x: player.x, y: player.y };
 const aim = { x: 1, y: 0, active: false, pointer: null };
-const projectiles = [];
-let movePointer = null;
+const projectiles=[];
+const enemies=[{x:world.width/2+360,y:world.height/2+40,hp:100,maxHp:100,hit:0},{x:world.width/2+520,y:world.height/2-170,hp:100,maxHp:100,hit:0},{x:world.width/2-390,y:world.height/2+120,hp:100,maxHp:100,hit:0}];
+const traps=[],summons=[];const playerStats={hp:3000,maxHp:3000,ultimate:false,ultimateTime:0};let movePointer=null;
 
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 function isLandscape() { return innerWidth >= innerHeight; }
@@ -125,21 +126,11 @@ function resetAimKnob() {
   aimKnob.style.transform = "translate(-50%,-50%)";
 }
 
-function activateAim(skill) {
-  if (aim.active && aim.skill === skill) {
-    fireBasicAttack(skill);
-    return;
-  }
-  aim.active = true;
-  aim.skill = skill;
-  aim.x = player.angle ? Math.cos(player.angle) : 1;
-  aim.y = player.angle ? Math.sin(player.angle) : 0;
-  skills.forEach(b => b.classList.toggle("selected", b.dataset.skill === skill));
-  aimJoystick.classList.add("active");
-  aimLabel.classList.add("visible");
-  positionAimJoystick();
-  resetAimKnob();
-}
+function summonDistraction(){const d=Math.hypot(aim.x,aim.y)||1,dx=aim.x/d,dy=aim.y/d;summons.push({x:player.x+dx*190,y:player.y+dy*190,hp:900,maxHp:900,life:3000,attackCd:0});player.angle=Math.atan2(dy,dx)}
+function castBlobField(){const d=Math.hypot(aim.x,aim.y)||1,dx=aim.x/d,dy=aim.y/d,px=-dy,py=dx;const n=playerStats.ultimate?30:20;for(let i=0;i<n;i++){const row=Math.floor(i/3),col=i%3-1,dist=100+row*105;traps.push({x:player.x+dx*dist+px*col*58,y:player.y+dy*dist+py*col*58,life:6000,damage:playerStats.ultimate?16:4})}player.angle=Math.atan2(dy,dx)}
+function ultimateSpin(){enemies.forEach(e=>{const dx=e.x-player.x,dy=e.y-player.y,d=Math.hypot(dx,dy);if(d<230){e.hp-=120;e.x+=dx/(d||1)*150;e.y+=dy/(d||1)*150;e.hit=180}})}
+function activateUltimate(){if(!playerStats.ultimate){const p=summons[summons.length-1];if(p&&p.life>0){player.x=p.x;player.y=p.y}playerStats.ultimate=true;playerStats.ultimateTime=6500;skills.forEach(b=>b.classList.add("ultimate"))}else{playerStats.ultimate=false;playerStats.ultimateTime=0;skills.forEach(b=>b.classList.remove("ultimate"))}deactivateAim()}
+function activateAim(skill){if(skill==="C"){activateUltimate();return}if(aim.active&&aim.skill===skill){if(playerStats.ultimate){if(skill==="A")castBlobField();else ultimateSpin()}else{if(skill==="A")summonDistraction();else castBlobField()}deactivateAim();return}aim.active=true;aim.skill=skill;aim.x=player.angle?Math.cos(player.angle):1;aim.y=player.angle?Math.sin(player.angle):0;skills.forEach(x=>x.classList.toggle("selected",x.dataset.skill===skill));aimJoystick.classList.add("active");aimLabel.classList.add("visible");positionAimJoystick();resetAimKnob()}
 
 function deactivateAim() {
   aim.active = false;
@@ -193,7 +184,7 @@ function cameraBasis(){const forward={x:Math.cos(player.angle),y:Math.sin(player
 function projectWorld(x,y,height=0){const{forward,right}=cameraBasis();const dx=x-player.x,dy=y-player.y;const depth=dx*forward.x+dy*forward.y;const lateral=dx*right.x+dy*right.y;const horizon=innerHeight*.36;const focal=Math.min(innerWidth,innerHeight)*.78;const scale=focal/Math.max(180,depth+520);return{x:innerWidth/2+lateral*scale,y:horizon+innerHeight*.32*(depth/900)-height*scale,scale,depth}}
 
 function drawBackground(t){
- const w=innerWidth,h=innerHeight;const sky=ctx.createLinearGradient(0,0,0,h);sky.addColorStop(0,"#050817");sky.addColorStop(.38,"#172d59");sky.addColorStop(.58,"#263b4b");sky.addColorStop(1,"#090d18");ctx.fillStyle=sky;ctx.fillRect(0,0,w,h);
+ const w=innerWidth,h=innerHeight;const sky=ctx.createLinearGradient(0,0,0,h);sky.addColorStop(0,"#7fc9ed");sky.addColorStop(.38,"#bfe4d1");sky.addColorStop(.58,"#e8d49c");sky.addColorStop(1,"#7aa889");ctx.fillStyle=sky;ctx.fillRect(0,0,w,h);
  const glow=ctx.createRadialGradient(w*.5,h*.37,10,w*.5,h*.37,w*.65);glow.addColorStop(0,"rgba(126,184,255,.22)");glow.addColorStop(1,"rgba(70,90,180,0)");ctx.fillStyle=glow;ctx.fillRect(0,0,w,h);
  ctx.fillStyle="#101a2b";ctx.beginPath();ctx.moveTo(0,h*.48);ctx.lineTo(w*.1,h*.36);ctx.lineTo(w*.2,h*.44);ctx.lineTo(w*.34,h*.32);ctx.lineTo(w*.47,h*.43);ctx.lineTo(w*.61,h*.34);ctx.lineTo(w*.75,h*.42);ctx.lineTo(w*.9,h*.31);ctx.lineTo(w,h*.43);ctx.lineTo(w,h*.57);ctx.lineTo(0,h*.57);ctx.closePath();ctx.fill();
  ctx.save();ctx.beginPath();ctx.rect(0,h*.43,w,h*.57);ctx.clip();const{forward,right}=cameraBasis();
@@ -203,6 +194,7 @@ function drawBackground(t){
  const objects=[{x:player.x+right.x*620+forward.x*620,y:player.y+right.y*620+forward.y*620,s:130},{x:player.x-right.x*720+forward.x*760,y:player.y-right.y*720+forward.y*760,s:160},{x:player.x+right.x*880+forward.x*1200,y:player.y+right.y*880+forward.y*1200,s:190},{x:player.x-right.x*900+forward.x*1450,y:player.y-right.y*900+forward.y*1450,s:220}];
  for(const o of objects){const p=projectWorld(o.x,o.y,o.s);if(p.depth<100||p.depth>2800)continue;const sz=o.s*p.scale;ctx.fillStyle="rgba(12,20,35,.9)";ctx.fillRect(p.x-sz*.35,p.y-sz,sz*.7,sz);ctx.strokeStyle="rgba(108,145,220,.22)";ctx.strokeRect(p.x-sz*.35,p.y-sz,sz*.7,sz)}
  const rune=projectWorld(player.x+forward.x*1150,player.y+forward.y*1150);ctx.save();ctx.translate(rune.x,rune.y);ctx.scale(rune.scale*180,rune.scale*180);ctx.rotate(t/6000);ctx.strokeStyle="rgba(105,156,255,.35)";ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,1,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(0,-.8);ctx.lineTo(.7,.4);ctx.lineTo(-.7,.4);ctx.closePath();ctx.stroke();ctx.restore();
+ const toys=[[-620,720,"#f0a8b8",170],[650,820,"#79b9d4",190],[-760,1250,"#f1c86d",220],[780,1500,"#8bc481",180]];for(const[oLat,oDep,c,z0]of toys){const p=projectWorld(player.x+right.x*oLat+forward.x*oDep,player.y+right.y*oLat+forward.y*oDep,z0);if(p.depth<100||p.depth>2700)continue;const z=z0*p.scale;ctx.fillStyle=c;ctx.fillRect(p.x-z*.4,p.y-z*.75,z*.8,z*.75);ctx.fillStyle="rgba(255,255,255,.3)";ctx.fillRect(p.x-z*.3,p.y-z*.65,z*.6,z*.1)}
 }
 
 function drawJugo(t){
@@ -215,33 +207,14 @@ function drawJugo(t){
  ctx.save();ctx.rotate(player.angle-.45);ctx.strokeStyle="#8b6eff";ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(30,-5);ctx.lineTo(105,72);ctx.stroke();ctx.fillStyle="#a8edff";ctx.beginPath();ctx.moveTo(104,70);ctx.lineTo(137,48);ctx.lineTo(125,86);ctx.lineTo(98,92);ctx.closePath();ctx.fill();ctx.restore();ctx.restore();
 }
 
+function drawWorldEntities(){for(const q of traps){const p=projectWorld(q.x,q.y,3);if(p.depth<0)continue;const r=Math.max(5,20*p.scale);ctx.fillStyle="rgba(101,91,255,.2)";ctx.beginPath();ctx.ellipse(p.x,p.y,r*1.7,r*.7,0,0,Math.PI*2);ctx.fill();ctx.fillStyle="#72d9ff";ctx.beginPath();ctx.arc(p.x,p.y,r*.45,0,Math.PI*2);ctx.fill()}for(const q of summons){const p=projectWorld(q.x,q.y,65);if(p.depth<0)continue;const z=Math.max(15,50*p.scale);ctx.fillStyle="#efbd6b";ctx.beginPath();ctx.arc(p.x,p.y-z*.5,32*p.scale,0,Math.PI*2);ctx.fill();ctx.fillStyle="#63df83";ctx.fillRect(p.x-40*p.scale,p.y-z*.5-48*p.scale,80*p.scale*(q.hp/q.maxHp),6)}for(const e of enemies){const p=projectWorld(e.x,e.y,55);if(p.depth<0)continue;const z=Math.max(15,45*p.scale);ctx.fillStyle=e.hit>0?"#fff":"#70577c";ctx.beginPath();ctx.arc(p.x,p.y-z,z*.7,0,Math.PI*2);ctx.fill();ctx.fillStyle="#ff8d9d";ctx.beginPath();ctx.arc(p.x-z*.25,p.y-z*1.05,z*.1,0,Math.PI*2);ctx.arc(p.x+z*.25,p.y-z*1.05,z*.1,0,Math.PI*2);ctx.fill();ctx.fillStyle="#61df83";ctx.fillRect(p.x-z,p.y-z*.05,z*2*(e.hp/e.maxHp),5)}}
 function drawProjectiles(){ctx.save();for(const p of projectiles){const q=projectWorld(p.x,p.y,28);if(q.depth<0)continue;const r=Math.max(4,12*q.scale);const g=ctx.createRadialGradient(q.x,q.y,1,q.x,q.y,r*2.8);g.addColorStop(0,"#e9ffff");g.addColorStop(.25,"#61d7ff");g.addColorStop(.6,"#705bff");g.addColorStop(1,"rgba(70,60,255,0)");ctx.fillStyle=g;ctx.beginPath();ctx.arc(q.x,q.y,r*2.8,0,Math.PI*2);ctx.fill();ctx.fillStyle="#e8ffff";ctx.beginPath();ctx.arc(q.x,q.y,r,0,Math.PI*2);ctx.fill()}ctx.restore()}
 
-function update(dt) {
-  let x=input.x,y=input.y;
-  if(input.keys.has("w")||input.keys.has("arrowup"))y-=1;
-  if(input.keys.has("s")||input.keys.has("arrowdown"))y+=1;
-  if(input.keys.has("a")||input.keys.has("arrowleft"))x-=1;
-  if(input.keys.has("d")||input.keys.has("arrowright"))x+=1;
-  const len=Math.hypot(x,y);
-  if(len>1){x/=len;y/=len;}
-  if(Math.hypot(x,y)>.08) player.angle=Math.atan2(y,x);
-  player.x=clamp(player.x+x*player.speed*dt/16,90,world.width-90);
-  player.y=clamp(player.y+y*player.speed*dt/16,90,world.height-90);
-  camera.x+=(player.x-camera.x)*.09;camera.y+=(player.y-camera.y)*.09;
-
-  for(let i=projectiles.length-1;i>=0;i--){
-    const p=projectiles[i];
-    p.x+=p.vx*dt/16;p.y+=p.vy*dt/16;p.life-=dt;
-    if(p.life<=0||p.x<0||p.y<0||p.x>world.width||p.y>world.height)projectiles.splice(i,1);
-  }
-  if(aim.active) positionAimJoystick();
-}
-
+function update(dt){let x=input.x,y=input.y;if(playerStats.ultimate){playerStats.ultimateTime-=dt;if(playerStats.ultimateTime<=0){playerStats.ultimate=false;skills.forEach(b=>b.classList.remove("ultimate"))}}if(input.keys.has("w")||input.keys.has("arrowup"))y-=1;if(input.keys.has("s")||input.keys.has("arrowdown"))y+=1;if(input.keys.has("a")||input.keys.has("arrowleft"))x-=1;if(input.keys.has("d")||input.keys.has("arrowright"))x+=1;const l=Math.hypot(x,y);if(l>1){x/=l;y/=l}if(Math.hypot(x,y)>.08)player.angle=Math.atan2(y,x);player.x=clamp(player.x+x*player.speed*(playerStats.ultimate?1.12:1)*dt/16,90,world.width-90);player.y=clamp(player.y+y*player.speed*(playerStats.ultimate?1.12:1)*dt/16,90,world.height-90);camera.x+=(player.x-camera.x)*.09;camera.y+=(player.y-camera.y)*.09;for(const e of enemies){e.hit=Math.max(0,e.hit-dt);const q=summons.find(x=>x.life>0);if(q){const dx=q.x-e.x,dy=q.y-e.y,d=Math.hypot(dx,dy);if(d<560){e.x+=dx/(d||1)*.55*dt/16;e.y+=dy/(d||1)*.55*dt/16;if(d<75)q.hp-=.22*dt/16}}for(const t of traps)if(Math.hypot(t.x-e.x,t.y-e.y)<42)e.hp-=t.damage*dt/1000}for(let i=summons.length-1;i>=0;i--){const q=summons[i];q.life-=dt;q.attackCd-=dt;if(q.attackCd<=0){q.attackCd=420;for(const e of enemies)if(Math.hypot(e.x-q.x,e.y-q.y)<230)e.hp-=7}if(q.hp<=0||q.life<=0)summons.splice(i,1)}for(let i=traps.length-1;i>=0;i--)if((traps[i].life-=dt)<=0)traps.splice(i,1);for(let i=projectiles.length-1;i>=0;i--){const p=projectiles[i];p.x+=p.vx*dt/16;p.y+=p.vy*dt/16;p.life-=dt;if(p.life<=0||p.x<0||p.y<0||p.x>world.width||p.y>world.height)projectiles.splice(i,1)}for(const e of enemies)if(e.hp<=0){e.hp=e.maxHp;e.x=world.width/2+(Math.random()-.5)*1200;e.y=world.height/2+(Math.random()-.5)*900}if(aim.active)positionAimJoystick()}
 let last=performance.now();
 function loop(now){
   const dt=Math.min(40,now-last);last=now;
-  update(dt);drawBackground(now);drawProjectiles();drawJugo(now);
+  update(dt);drawBackground(now);drawWorldEntities();drawProjectiles();drawJugo(now);
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
