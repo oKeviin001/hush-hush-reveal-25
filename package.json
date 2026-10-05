@@ -1,5 +1,5 @@
 {
-  "name": "jugO-mobile-prototype",
+  "name": "jugo-mobile-prototype",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -10,6 +10,9 @@
     "preview": "vite preview"
   },
   "devDependencies": {
-    "vite": "^7.0.0"
+    "vite": "^6.3.5"
+  },
+  "engines": {
+    "node": ">=18.18.0"
   }
 }
