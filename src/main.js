@@ -58,8 +58,16 @@ const input = { x: 0, y: 0, keys: new Set() };
 const camera = { x: player.x, y: player.y };
 const aim = { x: 1, y: 0, active: false, pointer: null };
 const projectiles=[];
-const enemies=[{x:world.width/2+360,y:world.height/2+40,hp:100,maxHp:100,hit:0},{x:world.width/2+520,y:world.height/2-170,hp:100,maxHp:100,hit:0},{x:world.width/2-390,y:world.height/2+120,hp:100,maxHp:100,hit:0}];
-const traps=[],summons=[];const playerStats={hp:3000,maxHp:3000,ultimate:false,ultimateTime:0};let movePointer=null;
+const enemies=[
+  {x:world.width/2+360,y:world.height/2+40,hp:180,maxHp:180,hit:0,type:"knight",speed:1.05,attackCd:0,attackRange:72,damage:55},
+  {x:world.width/2+520,y:world.height/2-170,hp:180,maxHp:180,hit:0,type:"knight",speed:1.0,attackCd:0,attackRange:72,damage:55},
+  {x:world.width/2-390,y:world.height/2+120,hp:180,maxHp:180,hit:0,type:"knight",speed:1.1,attackCd:0,attackRange:72,damage:55},
+  {x:world.width/2+760,y:world.height/2-430,hp:120,maxHp:120,hit:0,type:"archer",speed:.48,attackCd:900,attackRange:900,damage:38},
+  {x:world.width/2-820,y:world.height/2-330,hp:120,maxHp:120,hit:0,type:"archer",speed:.5,attackCd:1350,attackRange:950,damage:42}
+];
+const traps=[],summons=[],enemyProjectiles=[];
+const playerStats={hp:3000,maxHp:3000,ultimate:false,ultimateTime:0};
+let movePointer=null;
 
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 function isLandscape() { return innerWidth >= innerHeight; }
@@ -208,10 +216,76 @@ function drawJugo(t){
  ctx.save();ctx.rotate(player.angle-.45);ctx.strokeStyle="#8b6eff";ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(30,-5);ctx.lineTo(105,72);ctx.stroke();ctx.fillStyle="#a8edff";ctx.beginPath();ctx.moveTo(104,70);ctx.lineTo(137,48);ctx.lineTo(125,86);ctx.lineTo(98,92);ctx.closePath();ctx.fill();ctx.restore();ctx.restore();
 }
 
-function drawWorldEntities(){for(const q of traps){const p=projectWorld(q.x,q.y,3);if(p.depth<0)continue;const r=Math.max(5,20*p.scale);ctx.fillStyle="rgba(101,91,255,.2)";ctx.beginPath();ctx.ellipse(p.x,p.y,r*1.7,r*.7,0,0,Math.PI*2);ctx.fill();ctx.fillStyle="#72d9ff";ctx.beginPath();ctx.arc(p.x,p.y,r*.45,0,Math.PI*2);ctx.fill()}for(const q of summons){const p=projectWorld(q.x,q.y,65);if(p.depth<0)continue;const z=Math.max(15,50*p.scale);ctx.fillStyle="#efbd6b";ctx.beginPath();ctx.arc(p.x,p.y-z*.5,32*p.scale,0,Math.PI*2);ctx.fill();ctx.fillStyle="#63df83";ctx.fillRect(p.x-40*p.scale,p.y-z*.5-48*p.scale,80*p.scale*(q.hp/q.maxHp),6)}for(const e of enemies){const p=projectWorld(e.x,e.y,55);if(p.depth<0)continue;const z=Math.max(15,45*p.scale);ctx.fillStyle=e.hit>0?"#fff":"#70577c";ctx.beginPath();ctx.arc(p.x,p.y-z,z*.7,0,Math.PI*2);ctx.fill();ctx.fillStyle="#ff8d9d";ctx.beginPath();ctx.arc(p.x-z*.25,p.y-z*1.05,z*.1,0,Math.PI*2);ctx.arc(p.x+z*.25,p.y-z*1.05,z*.1,0,Math.PI*2);ctx.fill();ctx.fillStyle="#61df83";ctx.fillRect(p.x-z,p.y-z*.05,z*2*(e.hp/e.maxHp),5)}}
-function drawProjectiles(){ctx.save();for(const p of projectiles){const q=projectWorld(p.x,p.y,28);if(q.depth<0)continue;const r=Math.max(4,12*q.scale);const g=ctx.createRadialGradient(q.x,q.y,1,q.x,q.y,r*2.8);g.addColorStop(0,"#e9ffff");g.addColorStop(.25,"#61d7ff");g.addColorStop(.6,"#705bff");g.addColorStop(1,"rgba(70,60,255,0)");ctx.fillStyle=g;ctx.beginPath();ctx.arc(q.x,q.y,r*2.8,0,Math.PI*2);ctx.fill();ctx.fillStyle="#e8ffff";ctx.beginPath();ctx.arc(q.x,q.y,r,0,Math.PI*2);ctx.fill()}ctx.restore()}
+function drawWorldEntities(){
+for(const q of traps){const p=projectWorld(q.x,q.y,3);if(p.depth<0)continue;const r=Math.max(5,20*p.scale);ctx.fillStyle="rgba(101,91,255,.2)";ctx.beginPath();ctx.ellipse(p.x,p.y,r*1.7,r*.7,0,0,Math.PI*2);ctx.fill();ctx.fillStyle="#72d9ff";ctx.beginPath();ctx.arc(p.x,p.y,r*.45,0,Math.PI*2);ctx.fill()}for(const q of summons){const p=projectWorld(q.x,q.y,65);if(p.depth<0)continue;const z=Math.max(15,50*p.scale);ctx.fillStyle="#efbd6b";ctx.beginPath();ctx.arc(p.x,p.y-z*.5,32*p.scale,0,Math.PI*2);ctx.fill();ctx.fillStyle="#63df83";ctx.fillRect(p.x-40*p.scale,p.y-z*.5-48*p.scale,80*p.scale*(q.hp/q.maxHp),6)}for(const e of enemies){
+  const p=projectWorld(e.x,e.y,e.type==="archer"?72:70);
+  if(p.depth<0)continue;
+  const z=Math.max(15,(e.type==="archer"?52:62)*p.scale);
+  ctx.save();
+  ctx.translate(p.x,p.y);
+  if(e.hit>0){ctx.shadowBlur=18;ctx.shadowColor="#fff"}
+  if(e.type==="knight"){
+    ctx.fillStyle=e.hit>0?"#fff":"#46526f";
+    ctx.beginPath();ctx.ellipse(0,-z*.55,z*.58,z*.78,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="#7d8ba8";ctx.fillRect(-z*.42,-z*.82,z*.84,z*.55);
+    ctx.fillStyle="#252d43";ctx.fillRect(-z*.28,-z*.58,z*.56,z*.35);
+    ctx.fillStyle="#dce8ff";ctx.fillRect(-z*.18,-z*.52,z*.36,z*.06);
+    ctx.strokeStyle="#d7e1f5";ctx.lineWidth=Math.max(2,z*.08);ctx.beginPath();ctx.moveTo(z*.38,-z*.35);ctx.lineTo(z*.9,z*.85);ctx.stroke();
+    ctx.fillStyle="#9eabc4";ctx.beginPath();ctx.arc(-z*.65,-z*.25,z*.32,0,Math.PI*2);ctx.fill();
+  }else{
+    ctx.fillStyle=e.hit>0?"#fff":"#6a4e4a";ctx.beginPath();ctx.ellipse(0,-z*.58,z*.45,z*.65,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="#c69a72";ctx.beginPath();ctx.arc(0,-z*1.08,z*.28,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle="#6f3d25";ctx.lineWidth=Math.max(2,z*.06);ctx.beginPath();ctx.arc(0,-z*.58,z*.72,-1.1,1.1);ctx.stroke();
+    ctx.strokeStyle="#d6b07a";ctx.lineWidth=Math.max(2,z*.045);ctx.beginPath();ctx.moveTo(z*.55,-z*.9);ctx.lineTo(z*.95,-z*.05);ctx.stroke();
+  }
+  ctx.restore();
+  ctx.fillStyle="#61df83";ctx.fillRect(p.x-z,p.y-z*.02,z*2*Math.max(0,e.hp/e.maxHp),5);
+}
+function drawProjectiles(){
+ctx.save();
+for(const p of projectiles){const q=projectWorld(p.x,p.y,28);if(q.depth<0)continue;const r=Math.max(4,12*q.scale);const g=ctx.createRadialGradient(q.x,q.y,1,q.x,q.y,r*2.8);g.addColorStop(0,"#e9ffff");g.addColorStop(.25,"#61d7ff");g.addColorStop(.6,"#705bff");g.addColorStop(1,"rgba(70,60,255,0)");ctx.fillStyle=g;ctx.beginPath();ctx.arc(q.x,q.y,r*2.8,0,Math.PI*2);ctx.fill();ctx.fillStyle="#e8ffff";ctx.beginPath();ctx.arc(q.x,q.y,r,0,Math.PI*2);ctx.fill()}for(const a of enemyProjectiles){
+  const q=projectWorld(a.x,a.y,30);
+  if(q.depth<0)continue;
+  const r=Math.max(3,7*q.scale);
+  ctx.strokeStyle="#f5d39b";ctx.lineWidth=Math.max(2,3*q.scale);
+  ctx.beginPath();ctx.moveTo(q.x-r*3,q.y+r*1.5);ctx.lineTo(q.x+r*3,q.y-r*1.5);ctx.stroke();
+  ctx.fillStyle="#fff1c2";ctx.beginPath();ctx.arc(q.x,q.y,r,0,Math.PI*2);ctx.fill();
+}
+ctx.restore()}
 
-function update(dt){let x=input.x,y=input.y;if(playerStats.ultimate){playerStats.ultimateTime-=dt;if(playerStats.ultimateTime<=0){playerStats.ultimate=false;skills.forEach(b=>b.classList.remove("ultimate"))}}if(input.keys.has("w")||input.keys.has("arrowup"))y-=1;if(input.keys.has("s")||input.keys.has("arrowdown"))y+=1;if(input.keys.has("a")||input.keys.has("arrowleft"))x-=1;if(input.keys.has("d")||input.keys.has("arrowright"))x+=1;const l=Math.hypot(x,y);if(l>1){x/=l;y/=l}if(Math.hypot(x,y)>.08)player.angle=Math.atan2(y,x);player.x=clamp(player.x+x*player.speed*(playerStats.ultimate?1.12:1)*dt/16,90,world.width-90);player.y=clamp(player.y+y*player.speed*(playerStats.ultimate?1.12:1)*dt/16,90,world.height-90);camera.x+=(player.x-camera.x)*.09;camera.y+=(player.y-camera.y)*.09;for(const e of enemies){e.hit=Math.max(0,e.hit-dt);e.slow=Math.max(0,(e.slow||0)-dt/1000);const q=summons.find(x=>x.life>0);if(q){const dx=q.x-e.x,dy=q.y-e.y,d=Math.hypot(dx,dy);if(d<560){e.x+=dx/(d||1)*.55*(1-e.slow)*dt/16;e.y+=dy/(d||1)*.55*(1-e.slow)*dt/16;if(d<75)q.hp-=.22*dt/16}}for(const t of traps)if(Math.hypot(t.x-e.x,t.y-e.y)<42){e.hp-=t.damage*dt/1000;e.slow=t.slow}}for(let i=summons.length-1;i>=0;i--){const q=summons[i];q.life-=dt;q.attackCd-=dt;if(q.attackCd<=0){q.attackCd=420;for(const e of enemies)if(Math.hypot(e.x-q.x,e.y-q.y)<230)e.hp-=7}if(q.hp<=0||q.life<=0)summons.splice(i,1)}for(let i=traps.length-1;i>=0;i--)if((traps[i].life-=dt)<=0)traps.splice(i,1);for(let i=projectiles.length-1;i>=0;i--){const p=projectiles[i];p.x+=p.vx*dt/16;p.y+=p.vy*dt/16;p.life-=dt;if(p.life<=0||p.x<0||p.y<0||p.x>world.width||p.y>world.height)projectiles.splice(i,1)}for(const e of enemies)if(e.hp<=0){e.hp=e.maxHp;e.x=world.width/2+(Math.random()-.5)*1200;e.y=world.height/2+(Math.random()-.5)*900}if(aim.active)positionAimJoystick();hpFill.style.width=`${Math.max(0,playerStats.hp/playerStats.maxHp)*100}%`;hpText.textContent=`${Math.ceil(playerStats.hp)} / 3000`}
+function update(dt){let x=input.x,y=input.y;if(playerStats.ultimate){playerStats.ultimateTime-=dt;if(playerStats.ultimateTime<=0){playerStats.ultimate=false;skills.forEach(b=>b.classList.remove("ultimate"))}}if(input.keys.has("w")||input.keys.has("arrowup"))y-=1;if(input.keys.has("s")||input.keys.has("arrowdown"))y+=1;if(input.keys.has("a")||input.keys.has("arrowleft"))x-=1;if(input.keys.has("d")||input.keys.has("arrowright"))x+=1;const l=Math.hypot(x,y);if(l>1){x/=l;y/=l}if(Math.hypot(x,y)>.08)player.angle=Math.atan2(y,x);player.x=clamp(player.x+x*player.speed*(playerStats.ultimate?1.12:1)*dt/16,90,world.width-90);player.y=clamp(player.y+y*player.speed*(playerStats.ultimate?1.12:1)*dt/16,90,world.height-90);camera.x+=(player.x-camera.x)*.09;camera.y+=(player.y-camera.y)*.09;for(const e of enemies){
+  e.hit=Math.max(0,e.hit-dt);
+  e.slow=Math.max(0,(e.slow||0)-dt/1000);
+  e.attackCd-=dt;
+  const q=summons.find(x=>x.life>0);
+  const target=q && Math.hypot(q.x-e.x,q.y-e.y)<560 ? q : player;
+  const dx=target.x-e.x,dy=target.y-e.y,d=Math.hypot(dx,dy)||1;
+  const slowFactor=1-e.slow;
+  if(e.type==="knight"){
+    if(d>e.attackRange){e.x+=dx/d*e.speed*slowFactor*dt/16;e.y+=dy/d*e.speed*slowFactor*dt/16}
+    else if(e.attackCd<=0){e.attackCd=1050;if(target===player)playerStats.hp=Math.max(0,playerStats.hp-e.damage);else target.hp=Math.max(0,target.hp-e.damage*.55)}
+  }else{
+    if(d<330){e.x-=dx/d*e.speed*slowFactor*dt/16;e.y-=dy/d*e.speed*slowFactor*dt/16}
+    if(d<=e.attackRange && e.attackCd<=0){
+      e.attackCd=1050+Math.random()*550;
+      const fast=Math.random()<.35;
+      const speed=fast?15:10;
+      enemyProjectiles.push({x:e.x,y:e.y,vx:dx/d*speed,vy:dy/d*speed,life:fast?1050:1500,damage:fast?52:e.damage});
+    }
+  }
+  for(const t of traps)if(Math.hypot(t.x-e.x,t.y-e.y)<42){e.hp-=t.damage*dt/1000;e.slow=t.slow}
+}for(let i=summons.length-1;i>=0;i--){const q=summons[i];q.life-=dt;q.attackCd-=dt;if(q.attackCd<=0){q.attackCd=420;for(const e of enemies)if(Math.hypot(e.x-q.x,e.y-q.y)<230)e.hp-=7}if(q.hp<=0||q.life<=0)summons.splice(i,1)}for(let i=traps.length-1;i>=0;i--)if((traps[i].life-=dt)<=0)traps.splice(i,1);for(let i=enemyProjectiles.length-1;i>=0;i--){
+  const a=enemyProjectiles[i];
+  a.x+=a.vx*dt/16;a.y+=a.vy*dt/16;a.life-=dt;
+  if(Math.hypot(a.x-player.x,a.y-player.y)<55){playerStats.hp=Math.max(0,playerStats.hp-a.damage);a.life=0}
+  if(a.life<=0||a.x<0||a.y<0||a.x>world.width||a.y>world.height)enemyProjectiles.splice(i,1);
+}
+for(let i=projectiles.length-1;i>=0;i--){const p=projectiles[i];p.x+=p.vx*dt/16;p.y+=p.vy*dt/16;p.life-=dt;if(p.life<=0||p.x<0||p.y<0||p.x>world.width||p.y>world.height)projectiles.splice(i,1)}for(const e of enemies)if(e.hp<=0){
+  e.hp=e.maxHp;
+  e.attackCd=e.type==="archer"?1200:0;
+  e.x=world.width/2+(Math.random()-.5)*1500;
+  e.y=world.height/2+(Math.random()-.5)*1100;
+}if(aim.active)positionAimJoystick();hpFill.style.width=`${Math.max(0,playerStats.hp/playerStats.maxHp)*100}%`;hpText.textContent=`${Math.ceil(playerStats.hp)} / 3000`}
 let last=performance.now();
 function loop(now){
   const dt=Math.min(40,now-last);last=now;
