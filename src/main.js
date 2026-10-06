@@ -134,7 +134,7 @@ const input={x:0,y:0,keys:new Set()};
 
 function reset(){
   player={x:-5,y:0,vx:0,vy:0,facing:1,hp:MAX_HP,atk:0,hit:0,anim:0,ult:0,inv:0,stun:0,alive:true};
-  enemy={x:5,y:0,vx:0,vy:0,facing:-1,hp:ENEMY_MAX_HP,atk:0,hit:0,anim:0,ai:0,shoot:0,arrowHits:0,stealth:0,stealthCd:0,ultCd:7,alive:true,ultChoiceOpen:false,ultChoicePending:false,ultChoiceDone:false,ultChoiceTimer:0,ultChoiceIndex:0,ultFollowup:"",ultFollowCount:0,ultFollowTimer:0};
+  enemy={x:5,y:0,vx:0,vy:0,facing:-1,hp:ENEMY_MAX_HP,atk:0,hit:0,anim:0,ai:0,shoot:0,arrowHits:0,stealth:0,stealthCd:0,ultCd:7,alive:true,ultChoiceOpen:false,ultChoicePending:false,ultChoiceDone:false,ultChoiceTimer:0,ultChoiceIndex:0,ultFollowup:"",ultFollowCount:0,ultFollowTimer:0,ultBActive:false};
   projectiles=[];effects=[];cds={A:0,B:0,C:0};ended=false;cameraX=0;
   overlay.classList.add("hidden");roundText.textContent="ROUND "+round;fightMessage.textContent="JUGO";fightMessage.classList.remove("show");
   input.x=0;input.y=0;knob.style.transform="translate(-50%,-50%)";
@@ -154,7 +154,7 @@ addEventListener("keyup",e=>input.keys.delete(e.key.toLowerCase()));
 function isNear(){return Math.abs(player.x-enemy.x)<2.15&&Math.abs(player.y-enemy.y)<2.4;}
 function faceOpponent(){player.facing=enemy.x>=player.x?1:-1;}
 function damageEnemy(amount,knock=0){if(!enemy.alive)return;enemy.hp=Math.max(0,enemy.hp-amount);enemy.hit=.16;enemy.vx=knock;if(enemy.hp<=0){enemy.alive=false;finish(true);}}
-function damagePlayer(amount,knock=0){if(!player.alive||player.inv>0)return;player.hp=Math.max(0,player.hp-amount);player.hit=.18;player.vx=knock;if(player.hp<=0){player.alive=false;finish(false);}}
+function damagePlayer(amount,knock=0){if(!player.alive||player.inv>0)return;player.hp=Math.max(0,player.hp-amount);player.hit=.18;player.vx=knock;if(player.hp<=0){player.alive=false;enemy.ultBActive=false;finish(false);}}
 
 function basicAttack(){
  if(ended||!player.alive||player.atk>0||player.stun>0)return;
@@ -202,8 +202,9 @@ function fireArcherFollowup(){
     enemy.ultFollowCount++;
     enemy.ultFollowTimer=.34;
   }else if(enemy.ultFollowup==="B"&&enemy.ultFollowCount===0){
-    projectiles.push({type:"yellowArrow",x:enemy.x+enemy.facing*1.2,y:1.35,vx:enemy.facing*10.5,vy:0,life:4.5,owner:"enemy",split:false});
+    projectiles.push({type:"arrow",ultB:true,x:enemy.x+enemy.facing*1.2,y:1.35,vx:enemy.facing*10.5,vy:0,life:4.5,owner:"enemy",split:false});
     enemy.ultFollowCount=1;
+    enemy.ultBActive=true;
     enemy.ultFollowTimer=.2;
   }
 }
@@ -331,7 +332,7 @@ function update(dt){
    enemy.ultFollowTimer=Math.max(0,enemy.ultFollowTimer-dt);
    if(enemy.ultFollowup==="A"&&enemy.ultFollowCount<5&&enemy.ultFollowTimer<=0)fireArcherFollowup();
    if(enemy.ultFollowup==="A"&&enemy.ultFollowCount>=5){enemy.ultFollowup="";enemy.ultCd=18;}
-   if(enemy.ultFollowup==="B"&&enemy.ultFollowCount>=1&&!projectiles.some(q=>q.type==="yellowArrow"||q.type==="pierceArrow")){enemy.ultFollowup="";enemy.ultCd=18;}
+   if(enemy.ultFollowup==="B"&&enemy.ultFollowCount>=1&&!enemy.ultBActive){enemy.ultFollowup="";enemy.ultCd=18;}
  }
  for(let i=projectiles.length-1;i>=0;i--){
   const p=projectiles[i];
@@ -339,7 +340,7 @@ function update(dt){
   p.y+=(p.vy||p.dy||0)*dt;
   p.life-=dt;
 
-  if(p.type==="arrow"&&Math.abs(p.x-player.x)<.78&&p.y>=player.y-.15&&p.y<=player.y+2.35){
+  if(p.type==="arrow"&&!p.ultB&&Math.abs(p.x-player.x)<.78&&p.y>=player.y-.15&&p.y<=player.y+2.35){
     enemy.arrowHits++;
     const knockUp=enemy.arrowHits%2===0;
     // O impacto sempre empurra o Jugo PARA LONGE da flecha, nunca em direção ao arqueiro.
@@ -372,29 +373,31 @@ function update(dt){
     p.life=0;
   }
 
-  if(p.type==="yellowArrow"&&!p.split&&Math.abs(p.x-player.x)<=4.2){
-    p.split=true;p.x=player.x;p.vx=0;p.life=.5;p.explodeTimer=.5;p.y=player.y+1;
+  if(p.type==="arrow"&&p.ultB&&!p.split&&Math.abs(p.x-player.x)<=3.4){
+    p.split=true;p.x=player.x;p.vx=0;p.life=.5;p.y=player.y+1;
+    enemy.ultBActive=true;
     effects.push({type:"yellowSplit",x:player.x,y:player.y+1,life:.28,max:.28});
     projectiles.push(
-      {type:"pierceArrow",x:player.x-.08,y:player.y+.42,vx:0,vy:0,life:.5,owner:"enemy",hitDone:false},
-      {type:"pierceArrow",x:player.x+.08,y:player.y+1.58,vx:0,vy:0,life:.5,owner:"enemy",hitDone:false}
+      {type:"pierceArrow",x:player.x-.10,y:player.y+.42,vx:0,vy:0,life:.5,owner:"enemy",hitDone:false},
+      {type:"pierceArrow",x:player.x+.10,y:player.y+1.58,vx:0,vy:0,life:.5,owner:"enemy",hitDone:false}
     );
   }
   if(p.type==="pierceArrow"&&!p.hitDone){
     damagePlayer(player.ult>0?18:34,0);p.hitDone=true;
   }
-  if(p.type==="yellowArrow"&&p.split&&p.life<=0){
+  if(p.type==="arrow"&&p.ultB&&p.split&&p.life<=0){
     damagePlayer(player.ult>0?42:72,0);
     for(const q of projectiles)if(q.type==="pierceArrow")q.life=0;
     effects.push({type:"yellowExplosion",x:player.x,y:player.y+1,life:.55,max:.55});
     p.life=0;
+    enemy.ultBActive=false;
   }
   if(p.type==="pierceArrow"&&p.life>0)p.life-=dt;
 
   if(p.type==="orb"&&Math.abs(p.x-enemy.x)<1.0&&p.y>=enemy.y-.45&&p.y<=enemy.y+3.0){damageEnemy(player.ult>0?45:18,player.facing*1.5);p.life=0;effects.push({type:"hit",x:p.x,y:p.y,life:.2,max:.2});}
   if(p.type==="creature"&&Math.abs(p.x-enemy.x)<1.15&&p.y>=enemy.y-.45&&p.y<=enemy.y+3.1){damageEnemy(player.ult>0?95:50,player.facing*4);p.life=0;effects.push({type:"hit",x:p.x,y:1,life:.3,max:.3});}
   const visibleHalf=1/(2*(W>=H?.04:.065));
-  if(p.life<=0||Math.abs(p.x-cameraX)>visibleHalf+1.2||p.y<-1||p.y>4)projectiles.splice(i,1);
+  if(p.life<=0||(!p.ultB&&Math.abs(p.x-cameraX)>visibleHalf+1.2)||p.y<-1||p.y>4)projectiles.splice(i,1);
  }
  for(let i=effects.length-1;i>=0;i--){effects[i].life-=dt;if(effects[i].life<=0)effects.splice(i,1);}
  updateHud();
@@ -460,12 +463,12 @@ function draw(){
      const angle=Math.atan2(-(p.vy||0),p.vx);
      ctx.save();ctx.translate(x,y-4);ctx.rotate(angle);
      ctx.globalCompositeOperation="lighter";
-     ctx.strokeStyle="rgba(255,220,150,.24)";ctx.lineWidth=5;
+     ctx.strokeStyle=p.ultB?"rgba(255,245,70,.9)":"rgba(255,220,150,.24)";ctx.lineWidth=p.ultB?7:5;
      ctx.beginPath();ctx.moveTo(-20,0);ctx.lineTo(8,0);ctx.stroke();
      ctx.globalCompositeOperation="source-over";
-     ctx.strokeStyle="#f4d08a";ctx.lineWidth=2.5;
+     ctx.strokeStyle=p.ultB?"#fff36a":"#f4d08a";ctx.lineWidth=p.ultB?3.5:2.5;
      ctx.beginPath();ctx.moveTo(-19,0);ctx.lineTo(8,0);ctx.stroke();
-     ctx.fillStyle="#fff0bd";
+     ctx.fillStyle=p.ultB?"#fff36a":"#fff0bd";
      ctx.beginPath();ctx.moveTo(13,0);ctx.lineTo(6,-5);ctx.lineTo(7,0);ctx.lineTo(6,5);ctx.closePath();ctx.fill();
      ctx.strokeStyle="#d89a55";ctx.lineWidth=1.4;
      ctx.beginPath();ctx.moveTo(-19,0);ctx.lineTo(-26,-4);ctx.moveTo(-19,0);ctx.lineTo(-26,4);ctx.stroke();
