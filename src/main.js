@@ -200,10 +200,10 @@ function update(dt){
    enemy.atk=.48;
    enemy.anim=.45;
    const pattern=enemy.arrowHits%3;
-   // Flecha frontal: altura do peito do Jugo.
-   // Flecha alta: começa acima da cabeça e sobe em diagonal.
+   // A flecha frontal vai exatamente na faixa do peito do Jugo.
+   // A flecha alta começa acima da cabeça e sobe em diagonal.
    const highArrow=pattern===2;
-   const arrowY=highArrow?1.55:1.35;
+   const arrowY=highArrow?1.72:1.35;
    const speed=12.5;
    const vy=highArrow?1.0:0;
    projectiles.push({
@@ -227,7 +227,7 @@ function update(dt){
   p.y+=(p.vy||p.dy||0)*dt;
   p.life-=dt;
 
-  if(p.type==="arrow"&&player.y>.08&&Math.abs(p.x-player.x)<1.05&&p.y>=player.y+0.95&&p.y<=player.y+2.05){
+  if(p.type==="arrow"&&Math.abs(p.x-player.x)<1.05&&p.y>=player.y&&p.y<=player.y+1.45){
     enemy.arrowHits++;
     const knockUp=enemy.arrowHits%2===0;
     // O impacto sempre empurra o Jugo PARA LONGE da flecha, nunca em direção ao arqueiro.
