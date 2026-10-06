@@ -38,7 +38,14 @@ app.innerHTML = `
     </div>
     <button class="select-confirm" id="opponentConfirm">TESTAR CONTRA O ARQUEIRO</button>
   </section>
-  <div class="game-layer hidden" id="gameLayer">
+  <div class="ult-choice hidden" id="ultChoice">
+  <div class="ult-choice-title">ESCOLHA O ATAQUE</div>
+  <div class="ult-choice-buttons">
+    <button id="ultChoiceA">A — RAJADA</button>
+    <button id="ultChoiceB">B — PERFURAÇÃO</button>
+  </div>
+</div>
+<div class="game-layer hidden" id="gameLayer">
   <canvas id="game" aria-label="Arena de luta 1 contra 1"></canvas>
 
   <div class="hud fighter-hud">
@@ -81,6 +88,7 @@ app.innerHTML = `
   </div>
 </main>`;
 
+const ultChoice=document.querySelector("#ultChoice"),ultChoiceA=document.querySelector("#ultChoiceA"),ultChoiceB=document.querySelector("#ultChoiceB");
 const introScreen=document.querySelector("#introScreen"),mainMenu=document.querySelector("#mainMenu"),characterSelect=document.querySelector("#characterSelect"),opponentSelect=document.querySelector("#opponentSelect"),gameLayer=document.querySelector("#gameLayer"),testButton=document.querySelector("#testButton"),characterConfirm=document.querySelector("#characterConfirm"),opponentConfirm=document.querySelector("#opponentConfirm");
 let screen="intro";
 function showScreen(next){screen=next;[introScreen,mainMenu,characterSelect,opponentSelect,gameLayer].forEach(el=>el.classList.add("hidden"));const target={intro:introScreen,menu:mainMenu,characters:characterSelect,opponents:opponentSelect,game:gameLayer}[next];if(target)target.classList.remove("hidden");}
@@ -97,6 +105,8 @@ function menuAction(button,action){
 menuAction(testButton,()=>showScreen("characters"));
 menuAction(characterConfirm,()=>showScreen("opponents"));
 menuAction(opponentConfirm,()=>{showScreen("game");reset();});
+menuAction(ultChoiceA,()=>{chooseArcherUltimate("A");ultChoice.classList.add("hidden");});
+menuAction(ultChoiceB,()=>{chooseArcherUltimate("B");ultChoice.classList.add("hidden");});
 const canvas=document.querySelector("#game"),ctx=canvas.getContext("2d");
 const joystick=document.querySelector("#joystick"),knob=document.querySelector("#joystickKnob");
 const basic=document.querySelector("#basicAttack"),overlay=document.querySelector("#overlay");
@@ -129,7 +139,7 @@ const input={x:0,y:0,keys:new Set()};
 
 function reset(){
   player={x:-5,y:0,vx:0,vy:0,facing:1,hp:MAX_HP,atk:0,hit:0,anim:0,ult:0,inv:0,stun:0,alive:true};
-  enemy={x:5,y:0,vx:0,vy:0,facing:-1,hp:ENEMY_MAX_HP,atk:0,hit:0,anim:0,ai:0,shoot:0,arrowHits:0,stealth:0,stealthCd:0,ultCd:7,alive:true};
+  enemy={x:5,y:0,vx:0,vy:0,facing:-1,hp:ENEMY_MAX_HP,atk:0,hit:0,anim:0,ai:0,shoot:0,arrowHits:0,stealth:0,stealthCd:0,ultCd:7,alive:true,ultChoiceOpen:false,ultChoiceDone:false,ultFollowup:"",ultFollowCount:0,ultFollowTimer:0};
   projectiles=[];effects=[];cds={A:0,B:0,C:0};ended=false;cameraX=0;
   overlay.classList.add("hidden");roundText.textContent="ROUND "+round;fightMessage.textContent="JUGO";fightMessage.classList.remove("show");
   input.x=0;input.y=0;knob.style.transform="translate(-50%,-50%)";
@@ -171,6 +181,33 @@ overlay.addEventListener("pointerdown",()=>{if(ended){round++;reset();}});
 
 function finish(win){if(ended)return;ended=true;fightMessage.textContent=win?"K.O.":"DERROTA";fightMessage.classList.add("show");setTimeout(()=>{document.querySelector("#overlayTitle").textContent=win?"JUGO VENCEU":"JUGO PERDEU";overlay.classList.remove("hidden");},500);}
 
+
+function openArcherUltimateChoice(){
+  enemy.ultChoiceOpen=true;
+  enemy.ultChoiceDone=false;
+  enemy.ultFollowup="";
+  enemy.ultFollowCount=0;
+  enemy.ultFollowTimer=0;
+}
+function chooseArcherUltimate(choice){
+  if(!enemy.ultChoiceOpen||enemy.ultChoiceDone)return;
+  enemy.ultChoiceDone=true;
+  enemy.ultChoiceOpen=false;
+  enemy.ultFollowup=choice;
+  enemy.ultFollowCount=0;
+  enemy.ultFollowTimer=.08;
+}
+function fireArcherFollowup(){
+  if(enemy.ultFollowup==="A"&&enemy.ultFollowCount<5){
+    projectiles.push({type:"ultFollowArrow",x:enemy.x+enemy.facing*1.2,y:1.35,vx:enemy.facing*13,vy:0,life:1.8,owner:"enemy"});
+    enemy.ultFollowCount++;
+    enemy.ultFollowTimer=.34;
+  }else if(enemy.ultFollowup==="B"&&enemy.ultFollowCount===0){
+    projectiles.push({type:"yellowArrow",x:enemy.x+enemy.facing*1.2,y:1.35,vx:enemy.facing*10.5,vy:0,life:2.4,owner:"enemy",split:false});
+    enemy.ultFollowCount=1;
+  }
+}
+
 function update(dt){
  time+=dt;
  if(ended){updateHud();return;}
@@ -182,6 +219,7 @@ function update(dt){
  player.vx=player.stun>0?player.vx:move*6.2;
  if(player.stun<=0&&(input.y<-.45||up)&&Math.abs(player.y)<.02){player.vy=9.5;}
  player.vy-=22*dt;player.y=Math.max(0,player.y+player.vy*dt);
+ if(enemy.ultChoiceOpen&&player.y<=.001&&player.stun>0)player.stun=2.8;
  player.x=clamp(player.x+player.vx*dt,-17,17);
  if(Math.abs(player.vx)>.1&&player.stun<=0)player.facing=player.vx>0?1:-1;
  player.anim+=dt*(Math.abs(player.vx)*1.8+2);
@@ -278,6 +316,12 @@ function update(dt){
 
  // O arqueiro não procura corpo a corpo. Se for alcançado, sua resposta é fugir/invisibilidade.
 
+ if(enemy.ultChoiceDone&&!enemy.ultChoiceOpen&&enemy.ultFollowup){
+   enemy.ultFollowTimer=Math.max(0,enemy.ultFollowTimer-dt);
+   if(enemy.ultFollowup==="A"&&enemy.ultFollowCount<5&&enemy.ultFollowTimer<=0)fireArcherFollowup();
+   if(enemy.ultFollowup==="A"&&enemy.ultFollowCount>=5){enemy.ultFollowup="";enemy.ultCd=18;}
+   if(enemy.ultFollowup==="B"&&enemy.ultFollowCount>=1&&projectiles.every(q=>q.type!=="yellowArrow"&&q.type!=="pierceArrow")){enemy.ultFollowup="";enemy.ultCd=18;}
+ }
  for(let i=projectiles.length-1;i>=0;i--){
   const p=projectiles[i];
   p.x+=p.vx*dt;
@@ -305,9 +349,36 @@ function update(dt){
       player.stun=2.8;
       player.vx=Math.sign(p.vx)*7;
       player.vy=7.5;
+      openArcherUltimateChoice();
       effects.push({type:"stun",x:player.x,y:player.y+1.2,life:2.8,max:2.8});
     }
     p.life=0;
+  }
+
+  if(p.type==="ultFollowArrow"&&Math.abs(p.x-player.x)<.82&&p.y>=player.y-.2&&p.y<=player.y+2.5){
+    damagePlayer(player.ult>0?15:28,Math.sign(p.vx)*2.5);
+    effects.push({type:"hit",x:p.x,y:p.y,life:.18,max:.18});
+    p.life=0;
+  }
+
+  if(p.type==="yellowArrow"&&!p.split&&Math.abs(p.x-player.x)<=4.2){
+    p.split=true;p.x=player.x;p.vx=0;p.life=.5;p.explodeTimer=.5;p.y=player.y+1;
+    effects.push({type:"yellowSplit",x:player.x,y:player.y+1,life:.28,max:.28});
+    projectiles.push(
+      {type:"pierceArrow",x:player.x-.08,y:player.y+.42,vx:0,vy:0,life:.5,owner:"enemy",hitDone:false},
+      {type:"pierceArrow",x:player.x+.08,y:player.y+1.58,vx:0,vy:0,life:.5,owner:"enemy",hitDone:false}
+    );
+  }
+  if(p.type==="pierceArrow"&&!p.hitDone){
+    damagePlayer(player.ult>0?18:34,0);p.hitDone=true;
+  }
+  if(p.type==="pierceArrow"&&p.life>0){
+    p.life-=dt;
+    if(p.life<=0){
+      damagePlayer(player.ult>0?22:42,0);
+      effects.push({type:"yellowExplosion",x:player.x,y:player.y+1,life:.55,max:.55});
+      p.life=0;
+    }
   }
 
   if(p.type==="orb"&&Math.abs(p.x-enemy.x)<1.0&&p.y>=enemy.y-.45&&p.y<=enemy.y+3.0){damageEnemy(player.ult>0?45:18,player.facing*1.5);p.life=0;effects.push({type:"hit",x:p.x,y:p.y,life:.2,max:.2});}
@@ -356,6 +427,8 @@ function fighterDraw(f,img,h,flip){
  sprite(img,x,y-bob*H,h*scale,flip,alpha,f.hit>0?"brightness(2) saturate(.5)":"none");
 }
 function draw(){
+  if(ultChoice&&enemy.ultChoiceOpen&&screen==="game")ultChoice.classList.remove("hidden");
+  else if(ultChoice)ultChoice.classList.add("hidden");
  drawBackground();
  const floorY=H*.78;
  // shadows
