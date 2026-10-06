@@ -39,11 +39,7 @@ app.innerHTML = `
     <button class="select-confirm" id="opponentConfirm">TESTAR CONTRA O ARQUEIRO</button>
   </section>
   <div class="ult-choice hidden" id="ultChoice">
-  <div class="ult-choice-title">ESCOLHA O ATAQUE</div>
-  <div class="ult-choice-buttons">
-    <button id="ultChoiceA">A — RAJADA</button>
-    <button id="ultChoiceB">B — PERFURAÇÃO</button>
-  </div>
+  <div class="ult-choice-title">A IA ESTÁ ESCOLHENDO...</div>
 </div>
 <div class="game-layer hidden" id="gameLayer">
   <canvas id="game" aria-label="Arena de luta 1 contra 1"></canvas>
@@ -88,7 +84,7 @@ app.innerHTML = `
   </div>
 </main>`;
 
-const ultChoice=document.querySelector("#ultChoice"),ultChoiceA=document.querySelector("#ultChoiceA"),ultChoiceB=document.querySelector("#ultChoiceB");
+const ultChoice=document.querySelector("#ultChoice");
 const introScreen=document.querySelector("#introScreen"),mainMenu=document.querySelector("#mainMenu"),characterSelect=document.querySelector("#characterSelect"),opponentSelect=document.querySelector("#opponentSelect"),gameLayer=document.querySelector("#gameLayer"),testButton=document.querySelector("#testButton"),characterConfirm=document.querySelector("#characterConfirm"),opponentConfirm=document.querySelector("#opponentConfirm");
 let screen="intro";
 function showScreen(next){screen=next;[introScreen,mainMenu,characterSelect,opponentSelect,gameLayer].forEach(el=>el.classList.add("hidden"));const target={intro:introScreen,menu:mainMenu,characters:characterSelect,opponents:opponentSelect,game:gameLayer}[next];if(target)target.classList.remove("hidden");}
@@ -105,8 +101,7 @@ function menuAction(button,action){
 menuAction(testButton,()=>showScreen("characters"));
 menuAction(characterConfirm,()=>showScreen("opponents"));
 menuAction(opponentConfirm,()=>{showScreen("game");reset();});
-menuAction(ultChoiceA,()=>{chooseArcherUltimate("A");ultChoice.classList.add("hidden");});
-menuAction(ultChoiceB,()=>{chooseArcherUltimate("B");ultChoice.classList.add("hidden");});
+
 const canvas=document.querySelector("#game"),ctx=canvas.getContext("2d");
 const joystick=document.querySelector("#joystick"),knob=document.querySelector("#joystickKnob");
 const basic=document.querySelector("#basicAttack"),overlay=document.querySelector("#overlay");
@@ -139,7 +134,7 @@ const input={x:0,y:0,keys:new Set()};
 
 function reset(){
   player={x:-5,y:0,vx:0,vy:0,facing:1,hp:MAX_HP,atk:0,hit:0,anim:0,ult:0,inv:0,stun:0,alive:true};
-  enemy={x:5,y:0,vx:0,vy:0,facing:-1,hp:ENEMY_MAX_HP,atk:0,hit:0,anim:0,ai:0,shoot:0,arrowHits:0,stealth:0,stealthCd:0,ultCd:7,alive:true,ultChoiceOpen:false,ultChoicePending:false,ultChoiceDone:false,ultChoiceTimer:0,ultFollowup:"",ultFollowCount:0,ultFollowTimer:0};
+  enemy={x:5,y:0,vx:0,vy:0,facing:-1,hp:ENEMY_MAX_HP,atk:0,hit:0,anim:0,ai:0,shoot:0,arrowHits:0,stealth:0,stealthCd:0,ultCd:7,alive:true,ultChoiceOpen:false,ultChoicePending:false,ultChoiceDone:false,ultChoiceTimer:0,ultChoiceIndex:0,ultFollowup:"",ultFollowCount:0,ultFollowTimer:0};
   projectiles=[];effects=[];cds={A:0,B:0,C:0};ended=false;cameraX=0;
   overlay.classList.add("hidden");roundText.textContent="ROUND "+round;fightMessage.textContent="JUGO";fightMessage.classList.remove("show");
   input.x=0;input.y=0;knob.style.transform="translate(-50%,-50%)";
@@ -183,22 +178,23 @@ function finish(win){if(ended)return;ended=true;fightMessage.textContent=win?"K.
 
 
 function openArcherUltimateChoice(){
-  enemy.ultChoiceOpen=true;
+  // A IA alterna as duas opções a cada Ultimate.
+  // A primeira é A; na próxima Ultimate será B; depois A novamente.
+  enemy.ultChoiceOpen=false;
   enemy.ultChoicePending=false;
-  enemy.ultChoiceDone=false;
-  enemy.ultChoiceTimer=2.2;
-  enemy.ultFollowup="";
+  enemy.ultChoiceDone=true;
+  enemy.ultChoiceIndex=1-enemy.ultChoiceIndex;
+  enemy.ultFollowup=enemy.ultChoiceIndex===0?"A":"B";
   enemy.ultFollowCount=0;
-  enemy.ultFollowTimer=0;
+  enemy.ultFollowTimer=.12;
 }
 function chooseArcherUltimate(choice){
-  if(!enemy.ultChoiceOpen||enemy.ultChoiceDone)return;
+  // Mantido como fallback interno; o jogador não escolhe a Ultimate.
   enemy.ultChoiceDone=true;
-  enemy.ultChoiceTimer=0;
   enemy.ultChoiceOpen=false;
   enemy.ultFollowup=choice;
   enemy.ultFollowCount=0;
-  enemy.ultFollowTimer=.08;
+  enemy.ultFollowTimer=.12;
 }
 function fireArcherFollowup(){
   if(enemy.ultFollowup==="A"&&enemy.ultFollowCount<5){
@@ -206,8 +202,9 @@ function fireArcherFollowup(){
     enemy.ultFollowCount++;
     enemy.ultFollowTimer=.34;
   }else if(enemy.ultFollowup==="B"&&enemy.ultFollowCount===0){
-    projectiles.push({type:"yellowArrow",x:enemy.x+enemy.facing*1.2,y:1.35,vx:enemy.facing*10.5,vy:0,life:2.4,owner:"enemy",split:false});
+    projectiles.push({type:"yellowArrow",x:enemy.x+enemy.facing*1.2,y:1.35,vx:enemy.facing*10.5,vy:0,life:4.5,owner:"enemy",split:false});
     enemy.ultFollowCount=1;
+    enemy.ultFollowTimer=.2;
   }
 }
 
@@ -288,8 +285,6 @@ function update(dt){
    enemy.vx=0;
    enemy.shoot=0;
    enemy.atk=0;
-   enemy.ultChoiceTimer=Math.max(0,enemy.ultChoiceTimer-dt);
-   if(enemy.ultChoiceTimer<=0)chooseArcherUltimate("A");
  }else if(enemy.ultChoicePending){
    enemy.vx=0;
    enemy.shoot=0;
@@ -336,7 +331,7 @@ function update(dt){
    enemy.ultFollowTimer=Math.max(0,enemy.ultFollowTimer-dt);
    if(enemy.ultFollowup==="A"&&enemy.ultFollowCount<5&&enemy.ultFollowTimer<=0)fireArcherFollowup();
    if(enemy.ultFollowup==="A"&&enemy.ultFollowCount>=5){enemy.ultFollowup="";enemy.ultCd=18;}
-   if(enemy.ultFollowup==="B"&&enemy.ultFollowCount>=1&&projectiles.every(q=>q.type!=="yellowArrow"&&q.type!=="pierceArrow")){enemy.ultFollowup="";enemy.ultCd=18;}
+   if(enemy.ultFollowup==="B"&&enemy.ultFollowCount>=1&&!projectiles.some(q=>q.type==="yellowArrow"||q.type==="pierceArrow")){enemy.ultFollowup="";enemy.ultCd=18;}
  }
  for(let i=projectiles.length-1;i>=0;i--){
   const p=projectiles[i];
