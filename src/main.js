@@ -136,33 +136,42 @@ function update(dt){
  enemy.stealthCd=Math.max(0,enemy.stealthCd-dt);
  enemy.ultCd=Math.max(0,enemy.ultCd-dt);
 
- // IA de zoneamento: o arqueiro SEMPRE prefere aumentar a distância.
- // Ele só se aproxima quando precisa recuperar espaço para disparar.
  const distance=Math.abs(dx);
- const farDistance=8.0;
- if(distance<farDistance){
-   enemy.vx=clamp(-dx*1.8,-5.2,5.2);
- }else if(distance<9.8){
-   enemy.vx=0;
+
+ // Enquanto estiver invisível, NÃO pensa em atacar nem em seguir o Jugo:
+ // atravessa a arena até o canto oposto e só então volta ao comportamento normal.
+ if(enemy.stealth>0){
+   const escapeTarget=enemy.x>=0?-8.7:8.7;
+   enemy.vx=clamp((escapeTarget-enemy.x)*2.8,-6.4,6.4);
+   enemy.x=clamp(enemy.x+enemy.vx*dt,-9.2,9.2);
+   enemy.anim+=dt*(Math.abs(enemy.vx)*1.8+2);
  }else{
-   // Se Jugo ficar longe demais, aproxima apenas o suficiente para manter o alcance.
-   enemy.vx=clamp(dx*0.8,-3.0,3.0);
- }
+   // Zoneamento puro: quanto mais perto Jugo chega, mais o arqueiro tenta abrir espaço.
+   const farDistance=8.0;
+   if(distance<farDistance){
+     enemy.vx=clamp(-dx*1.8,-5.2,5.2);
+   }else if(distance<9.8){
+     enemy.vx=0;
+   }else{
+     // Só recupera distância de ataque quando Jugo estiver longe demais.
+     enemy.vx=clamp(dx*0.8,-3.0,3.0);
+   }
 
- // Quando Jugo invade o espaço, o arqueiro pode desaparecer e atravessar a arena.
- if(distance<5.2&&enemy.stealth<=0&&enemy.stealthCd<=0){
-   enemy.stealth=1.65;
-   enemy.stealthCd=8.0;
-   enemy.vx=enemy.facing*5.2;
-   effects.push({type:"stealth",x:enemy.x,y:1.4,life:.55,max:.55,enemy:true});
- }
+   // Se for encurralado, desaparece e escolhe deliberadamente o canto oposto.
+   if(distance<5.2&&enemy.stealthCd<=0){
+     enemy.stealth=2.0;
+     enemy.stealthCd=8.0;
+     enemy.vx=enemy.x>=0?-6.4:6.4;
+     effects.push({type:"stealth",x:enemy.x,y:1.4,life:.55,max:.55,enemy:true});
+   }
 
- enemy.x=clamp(enemy.x+enemy.vx*dt,-9.2,9.2);
- enemy.anim+=dt*(Math.abs(enemy.vx)*1.8+2);
+   enemy.x=clamp(enemy.x+enemy.vx*dt,-9.2,9.2);
+   enemy.anim+=dt*(Math.abs(enemy.vx)*1.8+2);
+ }
 
  // Ultimate: uma flecha gigante, reta, que atordoa por 2,8 segundos.
  // Ela só é usada com espaço suficiente para o arqueiro preparar o disparo.
- if(distance>5.5&&distance<11&&enemy.ultCd<=0){
+ if(enemy.stealth<=0&&distance>5.5&&distance<11&&enemy.ultCd<=0){
    enemy.ultCd=20;
    enemy.atk=.8;
    enemy.anim=.65;
@@ -170,9 +179,7 @@ function update(dt){
    const speed=12.5;
    projectiles.push({type:"ultArrow",x:enemy.x+enemy.facing*1.4,y:arrowY,vx:enemy.facing*speed,vy:0,life:2.0,owner:"enemy"});
    effects.push({type:"ultShot",x:enemy.x+enemy.facing*1.0,y:1.25,life:.45,max:.45,enemy:true});
- }else if(distance>5.2&&distance<11&&enemy.shoot<=0){
-   // Flechas comuns são linhas retas. O padrão alterna entre três alturas/ângulos
-   // para que o jogador consiga ler e desviar no salto.
+ }else if(enemy.stealth<=0&&distance>5.2&&distance<11&&enemy.shoot<=0){
    enemy.shoot=1.35;
    enemy.atk=.48;
    enemy.anim=.45;
@@ -192,11 +199,11 @@ function update(dt){
    effects.push({type:"bowshot",x:enemy.x+enemy.facing*.9,y:arrowY,life:.16,max:.16,flip:enemy.facing,enemy:true});
  }
 
- // Corpo a corpo é apenas um último recurso.
- if(distance<1.9&&Math.abs(player.y-enemy.y)<1.2&&enemy.atk<=0){
+ // Corpo a corpo é último recurso e só acontece se ele for realmente encurralado.
+ if(enemy.stealth<=0&&distance<1.9&&Math.abs(player.y-enemy.y)<1.2&&enemy.atk<=0){
    enemy.atk=.85;
    enemy.anim=.35;
-   damagePlayer(player.ult>0?28:45,-enemy.facing*3);
+   damagePlayer(player.ult>0?28:45,Math.sign(dx)*3);
    effects.push({type:"slash",x:enemy.x+enemy.facing*1.1,y:1.1,life:.18,max:.18,flip:enemy.facing,enemy:true});
  }
 
@@ -209,7 +216,8 @@ function update(dt){
   if(p.type==="arrow"&&Math.abs(p.x-player.x)<.85&&Math.abs(p.y-(player.y+1))<.85){
     enemy.arrowHits++;
     const knockUp=enemy.arrowHits%2===0;
-    damagePlayer(player.ult>0?22:38,-Math.sign(p.vx)*(knockUp?6.5:2.2));
+    // O impacto sempre empurra o Jugo PARA LONGE da flecha, nunca em direção ao arqueiro.
+    damagePlayer(player.ult>0?22:38,Math.sign(p.vx)*(knockUp?6.5:2.2));
     if(knockUp&&player.alive){
       player.vy=9.5;
       player.hit=.28;
@@ -221,10 +229,10 @@ function update(dt){
   }
 
   if(p.type==="ultArrow"&&Math.abs(p.x-player.x)<1.35&&Math.abs(p.y-(player.y+1))<1.15){
-    damagePlayer(player.ult>0?30:55,-Math.sign(p.vx)*7);
+    damagePlayer(player.ult>0?30:55,Math.sign(p.vx)*7);
     if(player.alive){
       player.stun=2.8;
-      player.vx=-Math.sign(p.vx)*7;
+      player.vx=Math.sign(p.vx)*7;
       player.vy=7.5;
       effects.push({type:"stun",x:player.x,y:player.y+1.2,life:2.8,max:2.8});
     }
