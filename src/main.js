@@ -24,6 +24,8 @@ app.innerHTML = `
 
   <div class="fight-message" id="fightMessage">JUGO</div>
 
+  <div class="orientation-hint" id="orientationHint">RECOMENDADO: JOGUE NA HORIZONTAL<br><span>Você também pode jogar na vertical.</span></div>
+
   <div class="controls fighter-controls">
     <div class="joystick" id="joystick" aria-label="Movimento">
       <div class="joystick-ring"></div>
@@ -61,7 +63,15 @@ IMG.jugo.src=jugoSideUrl;IMG.ult.src=jugoUltUrl;IMG.enemy=IMG.archer;IMG.archer.
 
 let W=0,H=0,dpr=1;
 function resize(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;canvas.width=W*dpr;canvas.height=H*dpr;canvas.style.width=W+"px";canvas.style.height=H+"px";ctx.setTransform(dpr,0,0,dpr,0,0);}
-addEventListener("resize",resize);resize();
+
+function updateOrientationHint(){
+  const hint=document.querySelector("#orientationHint");
+  if(!hint)return;
+  const portrait=innerHeight>innerWidth;
+  hint.classList.toggle("show",portrait);
+}
+
+addEventListener("resize",()=>{resize();updateOrientationHint();});resize();updateOrientationHint();
 
 const FLOOR=H=>H*.79;
 const MAX_HP=1000, ENEMY_MAX_HP=1000;
@@ -261,7 +271,14 @@ function sprite(img,x,y,h,flip=1,alpha=1,filter="none"){
  const w=h*img.naturalWidth/img.naturalHeight;ctx.save();ctx.translate(x,y);ctx.scale(flip,1);ctx.globalAlpha=alpha;ctx.filter=filter;ctx.drawImage(img,-w/2,-h,w,h);ctx.restore();
 }
 function fighterDraw(f,img,h,flip){
- const ground=H*.78,scale=Math.min(W/900,1.15),x=W/2+f.x*W*.035,y=ground-f.y*H*.075;
+ const ground=H*.78;
+  // No landscape, usamos a largura para dar mais espaço de luta; no portrait,
+  // reduzimos os sprites para manter os dois combatentes visíveis.
+  const landscape= W>=H;
+  const scaleBase=landscape?Math.min(W/900,1.15):Math.min(W/520,.82);
+  const scale=scaleBase;
+  const arenaWidth=landscape?W*.035:W*.065;
+  const x=W/2+f.x*arenaWidth,y=ground-f.y*H*.075;
  const moving=Math.abs(f.vx)>.1, bob=moving?Math.abs(Math.sin(f.anim*5))*.025:Math.sin(time*2.5)*.012;
  const alpha=f===enemy&&enemy.stealth>0?.10:1;
  sprite(img,x,y-bob*H,h*scale,flip,alpha,f.hit>0?"brightness(2) saturate(.5)":"none");
