@@ -171,10 +171,13 @@ let skillAimKey = null;
 let cameraPtr = null;
 let cameraLastX = 0;
 const cameraZone = {
-  minX: 0.34,
-  maxX: 0.98,
-  minY: 0.40,
-  maxY: 0.76
+  // Faixa grande no lado direito: começa no meio da tela
+  // e ocupa cerca de 30% da metade direita, deixando a área
+  // dos botões de habilidade livre.
+  minX: 0.50,
+  maxX: 1.00,
+  minY: 0.30,
+  maxY: 0.62
 };
 function inCameraZone(x, y) {
   return x >= innerWidth * cameraZone.minX &&
@@ -193,8 +196,9 @@ function moveCameraDrag(e) {
   if (cameraPtr !== e.pointerId) return;
   const dx = e.clientX - cameraLastX;
   cameraLastX = e.clientX;
-  // Sensibilidade deliberadamente moderada para permitir pequenos ajustes.
-  cam.yaw = wrap(cam.yaw - dx * 0.010);
+  // Somente o deslocamento horizontal controla a câmera.
+  // Arrastar para cima/baixo não altera o ângulo.
+  cam.yaw = wrap(cam.yaw - dx * 0.014);
 }
 function endCameraDrag(e) {
   if (cameraPtr !== e.pointerId) return;
