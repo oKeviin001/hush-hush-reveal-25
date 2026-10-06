@@ -1037,61 +1037,23 @@ function drawJugo() {
     ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = `rgba(255,240,210,${k * 0.8})`;
     ctx.fillRect(-0.15 - k * 0.2, -6, 0.3 + k * 0.4, 6); ctx.globalCompositeOperation = "source-over";
   }
-  ctx.scale(player.flip, 1);
-  const bob = -Math.abs(Math.sin(player.walk)) * 0.06 * moving, lean = moving * 0.12;
-  ctx.translate(0, bob); ctx.rotate(lean);
-  if (player.hurt > 0) ctx.filter = "brightness(2.2) saturate(.4)";
-  const flap = Math.sin(time * 7) * 0.06 + moving * 0.12;
-  // wings (crystal shards)
-  const wing = ctx.createLinearGradient(0, -1.8, 0, -0.5);
-  wing.addColorStop(0, u ? "rgba(255,225,170,.95)" : "rgba(190,170,255,.9)"); wing.addColorStop(1, u ? "rgba(255,150,80,.25)" : "rgba(90,110,255,.2)");
-  ctx.fillStyle = wing;
-  for (const s of [-1, 1]) {
-    const ext = 1 + u * 0.55;
-    ctx.beginPath(); ctx.moveTo(s * 0.12, -1.05); ctx.lineTo(s * 0.7 * ext, -1.6 * ext - flap); ctx.lineTo(s * 0.42, -1.05); ctx.lineTo(s * 0.85 * ext, -0.75 - flap * 0.5); ctx.lineTo(s * 0.36, -0.86); ctx.lineTo(s * 0.6 * ext, -0.45); ctx.lineTo(s * 0.15, -0.78); ctx.closePath(); ctx.fill();
-  }
-  // legs
-  const sw = Math.sin(player.walk) * 0.55 * moving;
-  ctx.lineCap = "round";
-  for (const s of [-1, 1]) {
-    const a = sw * s;
-    ctx.strokeStyle = s > 0 ? "#141c48" : "#0c1232"; ctx.lineWidth = 0.13;
-    ctx.beginPath(); ctx.moveTo(s * 0.08, -0.56); ctx.lineTo(s * 0.08 + Math.sin(a) * 0.28, -0.3); ctx.lineTo(s * 0.06 + Math.sin(a) * 0.5, -0.02 - Math.max(0, Math.sin(a)) * 0.06); ctx.stroke();
-    ctx.strokeStyle = u ? "#e0a24a" : "#6a7cff"; ctx.lineWidth = 0.05; ctx.beginPath(); ctx.moveTo(s * 0.06 + Math.sin(a) * 0.5 - 0.06, -0.02); ctx.lineTo(s * 0.06 + Math.sin(a) * 0.5 + 0.1, -0.02); ctx.stroke();
-  }
-  // torso
-  const body = ctx.createLinearGradient(-0.2, -1.15, 0.2, -0.5);
-  body.addColorStop(0, u ? "#ffd38a" : "#9e7cff"); body.addColorStop(0.45, u ? "#5a3aa8" : "#254dba"); body.addColorStop(1, "#0a122f");
-  ctx.fillStyle = body;
-  ctx.beginPath(); ctx.moveTo(0, -1.18); ctx.lineTo(0.24, -1.07); ctx.lineTo(0.2, -0.72); ctx.lineTo(0.12, -0.52); ctx.lineTo(-0.12, -0.52); ctx.lineTo(-0.2, -0.72); ctx.lineTo(-0.24, -1.07); ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = u ? "#ffcc70" : "#c9a54e"; ctx.lineWidth = 0.025; ctx.stroke();
-  ctx.fillStyle = u ? "#fff1c8" : "#7fe0ff"; ctx.beginPath(); ctx.moveTo(0, -0.98); ctx.lineTo(0.06, -0.86); ctx.lineTo(0, -0.74); ctx.lineTo(-0.06, -0.86); ctx.fill();
-  // head — big insectoid crown
-  const hb = Math.sin(time * 3) * 0.015;
-  ctx.save(); ctx.translate(0, hb);
-  const crown = 1 + u * 0.4;
-  ctx.fillStyle = "#0a1231";
-  ctx.beginPath(); ctx.moveTo(0, -1.95 * (1 + u * 0.12)); ctx.lineTo(0.1, -1.62); ctx.lineTo(0.34 * crown, -1.85 * (1 + u * 0.1)); ctx.lineTo(0.27, -1.45); ctx.lineTo(0.17, -1.22); ctx.lineTo(0, -1.13); ctx.lineTo(-0.17, -1.22); ctx.lineTo(-0.27, -1.45); ctx.lineTo(-0.34 * crown, -1.85 * (1 + u * 0.1)); ctx.lineTo(-0.1, -1.62); ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = u ? "#ffcf7a" : "#c9a54e"; ctx.lineWidth = 0.025; ctx.stroke();
-  ctx.fillStyle = u ? "#ffb85c" : "#6f5fff";
-  ctx.beginPath(); ctx.moveTo(0, -1.97); ctx.lineTo(-0.07, -1.62); ctx.lineTo(0, -1.45); ctx.lineTo(0.07, -1.62); ctx.closePath(); ctx.fill();
-  ctx.globalCompositeOperation = "lighter";
-  ctx.fillStyle = u ? "#fff0c0" : "#c5f2ff";
-  ctx.beginPath(); ctx.ellipse(0.1, -1.38, 0.07, 0.03, -0.3, 0, TAU); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(-0.07, -1.38, 0.05, 0.025, 0.3, 0, TAU); ctx.fill();
-  ctx.globalCompositeOperation = "source-over";
-  ctx.restore();
-  // sword arm
-  ctx.save(); ctx.translate(0.18, -0.98);
-  let a = 0.7 + Math.sin(player.walk) * 0.1 * moving;
-  if (player.slash > 0) { const k = 1 - player.slash / 0.28; a = lerp(-2.2, 1.6, Math.pow(k, 0.6)); }
-  ctx.rotate(a);
-  ctx.strokeStyle = "#141c48"; ctx.lineWidth = 0.08; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 0.3); ctx.stroke();
-  const L = u ? 1.35 : 0.95;
-  ctx.fillStyle = "#c9a54e"; ctx.fillRect(-0.09, 0.28, 0.18, 0.05);
-  const bl = ctx.createLinearGradient(0, 0.3, 0, 0.3 + L); bl.addColorStop(0, u ? "#fff2c8" : "#e4f8ff"); bl.addColorStop(1, u ? "#ff9a3c" : "#5f8bff");
-  ctx.fillStyle = bl; ctx.beginPath(); ctx.moveTo(-0.05, 0.33); ctx.lineTo(0.07, 0.33); ctx.lineTo(0.12 + u * 0.08, 0.3 + L * 0.7); ctx.lineTo(0, 0.3 + L); ctx.lineTo(-0.08, 0.3 + L * 0.55); ctx.closePath(); ctx.fill();
-  ctx.restore();
+  // reflexo de energia no chão sob Jugo
+  const away = Math.sin(player.facing) * view.F.x + Math.cos(player.facing) * view.F.z;
+  const back = away > 0.6 && moving > 0.2;
+  const bob = -Math.abs(Math.sin(player.walk)) * 0.07 * moving, lean = moving * 0.1 * (back ? 0 : 1);
+  ctx.translate(0, bob); ctx.rotate(lean * player.flip);
+  // squash & stretch nos passos + respiração parada
+  const breathe = 1 + Math.sin(time * 2.4) * 0.012 * (1 - moving);
+  const step = 1 + Math.abs(Math.cos(player.walk)) * 0.03 * moving;
+  ctx.scale(1 / step, step * breathe);
+  if (player.slash > 0) { const k = 1 - player.slash / 0.28; ctx.rotate(Math.sin(k * Math.PI) * 0.22 * player.flip); ctx.translate(Math.sin(k * Math.PI) * 0.12 * player.flip, 0); }
+  if (player.hurt > 0) ctx.filter = "brightness(2) saturate(.5)";
+  const img = u ? IMG.ult : back ? IMG.back : IMG.side;
+  sprite(img, u ? 1.95 : 1.7, back ? 1 : player.flip);
+  // rim light / brilho dos cristais
+  ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = 0.18 + 0.08 * Math.sin(time * 3);
+  sprite(img, u ? 1.95 : 1.7, back ? 1 : player.flip);
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
   ctx.filter = "none";
   ctx.restore();
   // slash arc
@@ -1141,37 +1103,15 @@ function drawKnight(e) {
   ctx.globalAlpha = (1 - fogOf(p.d) * 0.85) * (1 - Math.max(0, e.dead - 0.5) * 2) * e.spawn;
   ctx.scale(p.k, p.k); ctx.scale(e.flip, 1); ctx.rotate(dk * 1.4);
   if (e.flash > 0) ctx.filter = "brightness(3)";
-  const sw = Math.sin(e.walk) * 0.5 * moving, bob = -Math.abs(Math.sin(e.walk)) * 0.05 * moving;
-  ctx.translate(0, bob); ctx.lineCap = "round";
-  // wind-up key on back
-  ctx.save(); ctx.translate(-0.32, -1.25); ctx.scale(Math.cos(e.keyRot), 1); ctx.fillStyle = "#b08a3a"; ctx.beginPath(); ctx.ellipse(-0.14, 0, 0.12, 0.07, 0, 0, TAU); ctx.ellipse(0.14, 0, 0.12, 0.07, 0, 0, TAU); ctx.fill(); ctx.restore();
-  // legs
-  for (const s of [-1, 1]) { const a = sw * s; ctx.strokeStyle = "#565d80"; ctx.lineWidth = 0.16; ctx.beginPath(); ctx.moveTo(s * 0.12, -0.75); ctx.lineTo(s * 0.12 + Math.sin(a) * 0.35, -0.38); ctx.lineTo(s * 0.1 + Math.sin(a) * 0.55, -0.03); ctx.stroke(); }
-  // torso
-  const g = ctx.createLinearGradient(-0.3, -1.5, 0.3, -0.7); g.addColorStop(0, "#c2c8de"); g.addColorStop(0.5, "#6b7398"); g.addColorStop(1, "#2c3152");
-  ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(-0.32, -1.5); ctx.lineTo(0.32, -1.5); ctx.lineTo(0.26, -0.75); ctx.lineTo(-0.26, -0.75); ctx.closePath(); ctx.fill();
-  // tabard
-  ctx.fillStyle = "#3a2a78"; ctx.beginPath(); ctx.moveTo(-0.18, -1.38); ctx.lineTo(0.18, -1.38); ctx.lineTo(0.2, -0.55); ctx.lineTo(0.06, -0.62); ctx.lineTo(0, -0.5); ctx.lineTo(-0.06, -0.62); ctx.lineTo(-0.2, -0.55); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = "#d9b04a"; ctx.beginPath(); ctx.moveTo(0, -1.22); ctx.lineTo(0.08, -1.05); ctx.lineTo(0, -0.88); ctx.lineTo(-0.08, -1.05); ctx.fill();
-  // helmet
-  ctx.fillStyle = "#9aa2c2"; ctx.beginPath(); ctx.moveTo(-0.22, -1.52); ctx.lineTo(-0.22, -1.82); ctx.quadraticCurveTo(0, -2.02, 0.22, -1.82); ctx.lineTo(0.22, -1.52); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = "#14102a"; ctx.fillRect(-0.04, -1.76, 0.24, 0.05);
-  ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = "#ff6a3a"; ctx.fillRect(0.04, -1.755, 0.12, 0.035); ctx.globalCompositeOperation = "source-over";
-  ctx.fillStyle = "#6b3fc0"; ctx.beginPath(); ctx.moveTo(0, -1.95); ctx.quadraticCurveTo(-0.35, -2.15, -0.45, -1.75); ctx.quadraticCurveTo(-0.2, -1.9, 0, -1.9); ctx.fill();
-  // shield (front)
-  ctx.fillStyle = "#2b3466"; ctx.beginPath(); ctx.ellipse(0.2, -1.05, 0.22, 0.3, 0, 0, TAU); ctx.fill();
-  ctx.strokeStyle = "#c9a54e"; ctx.lineWidth = 0.035; ctx.stroke();
-  ctx.beginPath(); for (let i = 0; i < 20; i++) { const q = i / 20 * TAU * 1.5, r = 0.02 + i * 0.008; i ? ctx.lineTo(0.2 + Math.cos(q) * r, -1.05 + Math.sin(q) * r * 1.3) : ctx.moveTo(0.2, -1.05); } ctx.stroke();
-  // sword arm
-  ctx.save(); ctx.translate(0.28, -1.38);
-  let a = 0.5 + sw * 0.2;
-  if (e.state === "windup") a = lerp(0.5, -2.6, clamp(e.t / 0.3, 0, 1));
-  if (e.state === "strike") a = lerp(-2.6, 1.6, clamp(e.t / 0.12, 0, 1));
-  ctx.rotate(a);
-  ctx.strokeStyle = "#565d80"; ctx.lineWidth = 0.11; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 0.32); ctx.stroke();
-  ctx.fillStyle = "#c9a54e"; ctx.fillRect(-0.12, 0.32, 0.24, 0.05);
-  ctx.fillStyle = e.state === "windup" ? "#ffd0b0" : "#d6dcf0"; ctx.beginPath(); ctx.moveTo(-0.04, 0.37); ctx.lineTo(0.04, 0.37); ctx.lineTo(0.03, 1.2); ctx.lineTo(0, 1.3); ctx.lineTo(-0.03, 1.2); ctx.fill();
-  ctx.restore();
+  const bob = -Math.abs(Math.sin(e.walk)) * 0.06 * moving;
+  ctx.translate(0, bob); ctx.rotate(Math.sin(e.walk) * 0.06 * moving);
+  if (e.state === "windup") { const k = clamp(e.t / 0.55, 0, 1); ctx.rotate(-0.18 * k); if (!e.flash) ctx.filter = `sepia(${k * 0.5}) saturate(${1 + k * 2}) hue-rotate(-30deg) brightness(${1 + k * 0.35})`; }
+  if (e.state === "strike") { const k = clamp(e.t / 0.15, 0, 1); ctx.rotate(lerp(-0.18, 0.22, k)); ctx.translate(0.15 * k, 0); }
+  sprite(IMG.knight, 1.95);
+  if (e.state === "strike" && e.t < 0.2) {
+    ctx.globalCompositeOperation = "lighter"; ctx.strokeStyle = `rgba(255,190,140,${1 - e.t / 0.2})`; ctx.lineWidth = 0.08;
+    ctx.beginPath(); ctx.arc(0.2, -1.0, 0.95, -1.6, 0.9); ctx.stroke(); ctx.globalCompositeOperation = "source-over";
+  }
   ctx.filter = "none"; ctx.restore();
   if (!e.dead) hpBar(e.x, 2.3, e.z, e.hp / e.max, "#ff6a5a");
 }
@@ -1185,28 +1125,18 @@ function drawArcher(e) {
   ctx.globalAlpha = (1 - fogOf(p.d) * 0.85) * (1 - Math.max(0, e.dead - 0.5) * 2) * e.spawn;
   ctx.scale(p.k, p.k); ctx.scale(e.flip, 1); ctx.rotate(-dk * 1.4);
   if (e.flash > 0) ctx.filter = "brightness(3)";
-  const sw = Math.sin(e.walk) * 0.5 * moving; ctx.lineCap = "round";
-  ctx.translate(0, -Math.abs(Math.sin(e.walk)) * 0.04 * moving);
-  for (const s of [-1, 1]) { const a = sw * s; ctx.strokeStyle = "#2a2e2a"; ctx.lineWidth = 0.12; ctx.beginPath(); ctx.moveTo(s * 0.1, -0.7); ctx.lineTo(s * 0.1 + Math.sin(a) * 0.3, -0.36); ctx.lineTo(s * 0.08 + Math.sin(a) * 0.5, -0.02); ctx.stroke(); }
-  // quiver
-  ctx.fillStyle = "#4a2e1e"; ctx.save(); ctx.rotate(-0.35); ctx.fillRect(-0.42, -1.55, 0.14, 0.55); ctx.restore();
-  ctx.strokeStyle = "#a07cff"; ctx.lineWidth = 0.03; ctx.beginPath(); ctx.moveTo(-0.4, -1.55); ctx.lineTo(-0.48, -1.72); ctx.moveTo(-0.34, -1.57); ctx.lineTo(-0.38, -1.75); ctx.stroke();
-  // cloak
-  const g = ctx.createLinearGradient(0, -1.7, 0, -0.5); g.addColorStop(0, "#2f5a54"); g.addColorStop(1, "#11201f");
-  ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(0, -1.85); ctx.quadraticCurveTo(0.3, -1.7, 0.28, -1.3); ctx.lineTo(0.3, -0.62); ctx.lineTo(0.12, -0.7); ctx.lineTo(0, -0.58); ctx.lineTo(-0.15, -0.7); ctx.lineTo(-0.34, -0.6); ctx.lineTo(-0.28, -1.3); ctx.quadraticCurveTo(-0.3, -1.7, 0, -1.85); ctx.fill();
-  // face mask
-  ctx.fillStyle = "#d8cbb2"; ctx.beginPath(); ctx.ellipse(0.08, -1.5, 0.12, 0.13, 0, 0, TAU); ctx.fill();
-  ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = "#ffb43a"; ctx.beginPath(); ctx.arc(0.12, -1.52, 0.025, 0, TAU); ctx.arc(0.04, -1.52, 0.02, 0, TAU); ctx.fill(); ctx.globalCompositeOperation = "source-over";
-  // bow
+  ctx.translate(0, -Math.abs(Math.sin(e.walk)) * 0.05 * moving);
+  ctx.rotate(Math.sin(e.walk) * 0.05 * moving);
   const aimK = e.state === "aim" ? clamp(e.t / 0.6, 0, 1) : 0;
-  ctx.save(); ctx.translate(0.32, -1.15);
-  ctx.strokeStyle = "#6b4426"; ctx.lineWidth = 0.05; ctx.beginPath(); ctx.moveTo(0, -0.5); ctx.quadraticCurveTo(0.28, 0, 0, 0.5); ctx.stroke();
-  ctx.strokeStyle = "rgba(230,230,230,.8)"; ctx.lineWidth = 0.015; ctx.beginPath(); ctx.moveTo(0, -0.5); ctx.lineTo(-aimK * 0.3, 0); ctx.lineTo(0, 0.5); ctx.stroke();
-  if (e.state === "aim") {
-    ctx.strokeStyle = "#cfc6b0"; ctx.lineWidth = 0.025; ctx.beginPath(); ctx.moveTo(-aimK * 0.3, 0); ctx.lineTo(0.45, 0); ctx.stroke();
-    ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = `rgba(255,120,80,${aimK})`; ctx.beginPath(); ctx.arc(0.45, 0, 0.06 + aimK * 0.05, 0, TAU); ctx.fill(); ctx.globalCompositeOperation = "source-over";
+  if (e.state === "recover") ctx.translate(-0.08 * (1 - e.t / 0.45), 0);
+  sprite(IMG.archer, 1.75);
+  if (aimK > 0) {
+    ctx.globalCompositeOperation = "lighter";
+    const tip = ctx.createRadialGradient(0.62, -1.18, 0, 0.62, -1.18, 0.12 + aimK * 0.12);
+    tip.addColorStop(0, `rgba(255,170,90,${aimK})`); tip.addColorStop(1, "rgba(255,80,40,0)");
+    ctx.fillStyle = tip; ctx.beginPath(); ctx.arc(0.62, -1.18, 0.24, 0, TAU); ctx.fill();
+    ctx.globalCompositeOperation = "source-over";
   }
-  ctx.restore();
   ctx.filter = "none"; ctx.restore();
   if (!e.dead) hpBar(e.x, 2.15, e.z, e.hp / e.max, "#ffa24a", 0.85);
 }
@@ -1220,17 +1150,16 @@ function drawCreature(c) {
   const bob = Math.sin(time * 6) * 0.06;
   const col = c.big ? [255, 200, 120] : [110, 210, 255];
   ctx.globalCompositeOperation = "lighter";
-  const g = ctx.createRadialGradient(0, -0.6 + bob, 0, 0, -0.6 + bob, 1);
-  g.addColorStop(0, rgb(col, 0.55)); g.addColorStop(1, rgb(col, 0));
-  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, -0.6 + bob, 1, 0, TAU); ctx.fill();
+  const g = ctx.createRadialGradient(0, -0.5 + bob, 0, 0, -0.5 + bob, 1.1);
+  g.addColorStop(0, rgb(col, 0.5)); g.addColorStop(1, rgb(col, 0));
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, -0.5 + bob, 1.1, 0, TAU); ctx.fill();
   ctx.globalCompositeOperation = "source-over";
-  ctx.fillStyle = c.hit ? "#ffffff" : rgb(mix(col, [255, 255, 255], 0.3), 0.92);
-  ctx.beginPath(); ctx.ellipse(0, -0.55 + bob, 0.36, 0.3, 0, 0, TAU); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(-0.28, -0.7 + bob); ctx.lineTo(-0.42, -1.05 + bob + Math.sin(time * 9) * 0.04); ctx.lineTo(-0.1, -0.8 + bob); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(0.28, -0.7 + bob); ctx.lineTo(0.42, -1.05 + bob - Math.sin(time * 9) * 0.04); ctx.lineTo(0.1, -0.8 + bob); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(-0.3, -0.45 + bob); ctx.quadraticCurveTo(-0.7, -0.4 + Math.sin(time * 5) * 0.1, -0.6, -0.7 + bob); ctx.lineTo(-0.3, -0.55 + bob); ctx.fill();
-  ctx.fillStyle = "#0a1840"; ctx.beginPath(); ctx.ellipse(-0.1, -0.6 + bob, 0.05, 0.08, 0, 0, TAU); ctx.ellipse(0.12, -0.6 + bob, 0.05, 0.08, 0, 0, TAU); ctx.fill();
-  ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(-0.09, -0.63 + bob, 0.018, 0, TAU); ctx.arc(0.13, -0.63 + bob, 0.018, 0, TAU); ctx.fill();
+  ctx.translate(0, bob);
+  if (c.hit) ctx.filter = "brightness(2.4)";
+  else if (c.big) ctx.filter = "sepia(.6) saturate(2.2) hue-rotate(-10deg) brightness(1.15)";
+  const cf = Math.sin(Math.atan2(player.x - c.x, player.z - c.z)) * view.R.x + Math.cos(Math.atan2(player.x - c.x, player.z - c.z)) * view.R.z;
+  sprite(IMG.creature, 1.0, cf < 0 ? -1 : 1);
+  ctx.filter = "none";
   ctx.restore();
   if (!c.out) {
     hpBar(c.x, 1.5 * big, c.z, c.hp / c.max, c.big ? "#ffd38a" : "#6fe3ff", 0.9);
