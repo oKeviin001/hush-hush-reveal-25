@@ -6,6 +6,15 @@ import "./style.css";
    ========================================================= */
 
 const app = document.querySelector("#app");
+
+const skillAimStyle = document.createElement("style");
+skillAimStyle.textContent = `
+  .skill.aiming{z-index:8;box-shadow:0 0 0 3px #9fe6ff,0 0 30px #58c8ff;animation:pulse .8s infinite}
+  .skill.aim-stick{position:absolute;left:50%;top:50%;width:128%;height:128%;transform:translate(-50%,-50%);border-radius:50%;border:2px solid rgba(159,230,255,.72);background:radial-gradient(circle,rgba(88,200,255,.16),rgba(35,58,130,.22) 48%,rgba(8,12,36,.08) 72%,transparent 73%);box-shadow:inset 0 0 18px rgba(100,210,255,.2),0 0 22px rgba(88,200,255,.28);opacity:0;pointer-events:none;transition:opacity .08s,transform .12s}
+  .skill.aiming .aim-stick{opacity:1;transform:translate(-50%,-50%) scale(1.08)}
+  .skill.aim-knob{position:absolute;left:50%;top:50%;width:34%;height:34%;border-radius:50%;transform:translate(-50%,-50%);background:radial-gradient(circle at 35% 30%,#b9efff,#4b8ff0 48%,#162054 100%);border:2px solid rgba(220,245,255,.8);box-shadow:0 0 16px rgba(88,200,255,.7),inset 0 0 10px rgba(255,255,255,.2)}
+`;
+document.head.appendChild(skillAimStyle);
 app.innerHTML = `
   <main class="game-shell">
     <canvas id="game" aria-label="Mapa do Jugo"></canvas>
