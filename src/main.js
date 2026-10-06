@@ -290,7 +290,7 @@ function update(dt){
    enemy.vx=0;
    enemy.shoot=0;
    enemy.atk=0;
- }else if(enemy.ultFollowup){
+ }else if(enemy.ultFollowup&&!(enemy.ultFollowup==="B"&&!enemy.ultBActive&&!projectiles.some(q=>q.type==="arrow"&&q.ultB))){
    enemy.vx=0;
    enemy.shoot=0;
    enemy.atk=0;
@@ -332,7 +332,7 @@ function update(dt){
    enemy.ultFollowTimer=Math.max(0,enemy.ultFollowTimer-dt);
    if(enemy.ultFollowup==="A"&&enemy.ultFollowCount<5&&enemy.ultFollowTimer<=0)fireArcherFollowup();
    if(enemy.ultFollowup==="A"&&enemy.ultFollowCount>=5){enemy.ultFollowup="";enemy.ultCd=18;}
-   if(enemy.ultFollowup==="B"&&enemy.ultFollowCount>=1&&!enemy.ultBActive){enemy.ultFollowup="";enemy.ultCd=18;}
+   if(enemy.ultFollowup==="B"&&enemy.ultFollowCount>=1&&!projectiles.some(q=>q.type==="arrow"&&q.ultB)){enemy.ultBActive=false;enemy.ultFollowup="";enemy.ultCd=18;}
  }
  for(let i=projectiles.length-1;i>=0;i--){
   const p=projectiles[i];
