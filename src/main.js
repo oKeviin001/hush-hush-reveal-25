@@ -67,6 +67,7 @@ const FLOOR=H=>H*.79;
 const MAX_HP=1000, ENEMY_MAX_HP=1000;
 const CD={A:6,B:7,C:18};
 let player,enemy,projectiles,effects,cds,time=0,joyId=null,round=1,ended=false;
+const input={x:0,y:0,keys:new Set()};
 
 function reset(){
   player={x:-5,y:0,vx:0,vy:0,facing:1,hp:MAX_HP,atk:0,hit:0,anim:0,ult:0,inv:0,alive:true};
@@ -75,9 +76,9 @@ function reset(){
   overlay.classList.add("hidden");roundText.textContent="ROUND "+round;fightMessage.textContent="JUGO";fightMessage.classList.remove("show");
   input.x=0;input.y=0;knob.style.transform="translate(-50%,-50%)";
 }
+
 reset();
 
-const input={x:0,y:0,keys:new Set()};
 function joystickMove(x,y){const r=joystick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,max=r.width*.32;let dx=x-cx,dy=y-cy,l=Math.hypot(dx,dy)||1;l=Math.min(l,max);dx=dx/l*Math.min(Math.hypot(x-cx,y-cy),max);dy=dy/l*Math.min(Math.hypot(x-cx,y-cy),max);input.x=clamp(dx/max,-1,1);input.y=clamp(dy/max,-1,1);knob.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;}
 function resetJoy(){input.x=0;input.y=0;joyId=null;knob.style.transform="translate(-50%,-50%)";}
 joystick.addEventListener("pointerdown",e=>{e.preventDefault();joyId=e.pointerId;joystick.setPointerCapture(e.pointerId);joystickMove(e.clientX,e.clientY);});
