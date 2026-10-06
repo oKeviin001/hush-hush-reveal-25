@@ -76,7 +76,7 @@ addEventListener("resize",()=>{resize();updateOrientationHint();});resize();upda
 const FLOOR=H=>H*.79;
 const MAX_HP=1000, ENEMY_MAX_HP=1000;
 const CD={A:6,B:7,C:18};
-let player,enemy,projectiles,effects,cds,time=0,joyId=null,round=1,ended=false;
+let player,enemy,projectiles,effects,cds,time=0,joyId=null,round=1,ended=false,cameraX=0;
 const input={x:0,y:0,keys:new Set()};
 
 function reset(){
@@ -134,7 +134,7 @@ function update(dt){
  player.vx=player.stun>0?player.vx:move*6.2;
  if(player.stun<=0&&(input.y<-.45||up)&&Math.abs(player.y)<.02){player.vy=8.5;}
  player.vy-=22*dt;player.y=Math.max(0,player.y+player.vy*dt);
- player.x=clamp(player.x+player.vx*dt,-9.2,9.2);
+ player.x=clamp(player.x+player.vx*dt,-17,17);
  if(Math.abs(player.vx)>.1&&player.stun<=0)player.facing=player.vx>0?1:-1;
  player.anim+=dt*(Math.abs(player.vx)*1.8+2);
 
@@ -156,14 +156,14 @@ function update(dt){
 
  // O arqueiro sempre procura o ponto MAIS DISTANTE do Jugo.
  // Não existe "voltar para onde estava": a referência é sempre a posição atual do Jugo.
- const leftDistance=Math.abs(player.x-(-9.2));
- const rightDistance=Math.abs(player.x-9.2);
- const farthestCorner=leftDistance>rightDistance?-9.2:9.2;
+ const leftDistance=Math.abs(player.x-(-17));
+ const rightDistance=Math.abs(player.x-17);
+ const farthestCorner=leftDistance>rightDistance?-17:17;
 
  if(enemy.stealth>0){
    // Invisível: corrida contínua até o canto mais distante do Jugo.
    enemy.vx=clamp((farthestCorner-enemy.x)*4.5,-8.5,8.5);
-   enemy.x=clamp(enemy.x+enemy.vx*dt,-9.2,9.2);
+   enemy.x=clamp(enemy.x+enemy.vx*dt,-17,17);
    enemy.anim+=dt*(Math.abs(enemy.vx)*1.8+2);
  }else{
    // Mesmo sem estar invisível, ele se posiciona no extremo mais distante possível.
@@ -184,6 +184,15 @@ function update(dt){
    enemy.x=clamp(enemy.x+enemy.vx*dt,-9.2,9.2);
    enemy.anim+=dt*(Math.abs(enemy.vx)*1.8+2);
  }
+
+ // A arena é maior que a tela. A câmera acompanha o meio dos dois lutadores
+ // e para antes das extremidades do palco, como em um jogo de luta 2D.
+ const landscape=W>=H;
+ const worldScale=landscape?.04:.065;
+ const halfView=1/(2*worldScale);
+ const cameraLimit=17-halfView;
+ const targetCamera=clamp((player.x+enemy.x)*.5,-cameraLimit,cameraLimit);
+ cameraX+= (targetCamera-cameraX)*Math.min(1,dt*7.5);
 
  // Linha 1: ultimate. O arqueiro só prepara esse disparo quando o Jugo
  // cruza a faixa de segurança, mas ainda não chegou na zona de invisibilidade.
@@ -255,7 +264,8 @@ function update(dt){
 
   if(p.type==="orb"&&Math.abs(p.x-enemy.x)<1.0&&p.y>=enemy.y-.45&&p.y<=enemy.y+3.0){damageEnemy(player.ult>0?45:18,player.facing*1.5);p.life=0;effects.push({type:"hit",x:p.x,y:p.y,life:.2,max:.2});}
   if(p.type==="creature"&&Math.abs(p.x-enemy.x)<1.15&&p.y>=enemy.y-.45&&p.y<=enemy.y+3.1){damageEnemy(player.ult>0?95:50,player.facing*4);p.life=0;effects.push({type:"hit",x:p.x,y:1,life:.3,max:.3});}
-  if(p.life<=0||Math.abs(p.x)>12||p.y<-1||p.y>4)projectiles.splice(i,1);
+  const visibleHalf=1/(2*(W>=H?.04:.065));
+  if(p.life<=0||Math.abs(p.x-cameraX)>visibleHalf+1.2||p.y<-1||p.y>4)projectiles.splice(i,1);
  }
  for(let i=effects.length-1;i>=0;i--){effects[i].life-=dt;if(effects[i].life<=0)effects.splice(i,1);}
  updateHud();
@@ -264,10 +274,18 @@ function update(dt){
 function drawBackground(){
  const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,"#09071a");g.addColorStop(.55,"#18113a");g.addColorStop(1,"#30152e");ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
  const horizon=H*.58;ctx.fillStyle="rgba(110,80,190,.14)";ctx.fillRect(0,horizon,W,H*.22);
- for(let i=0;i<12;i++){const x=i*W/11;ctx.fillStyle="rgba(190,130,255,.08)";ctx.fillRect(x,horizon-80-(i%3)*25,18+(i%4)*20,80+(i%3)*25);}
+ for(let i=0;i<12;i++){
+   const x=((i*W/11-cameraX*W*.012)% (W+120)+W+120)%(W+120)-60;
+   ctx.fillStyle="rgba(190,130,255,.08)";
+   ctx.fillRect(x,horizon-80-(i%3)*25,18+(i%4)*20,80+(i%3)*25);
+ }
  const floorY=H*.78;ctx.fillStyle="#100d1f";ctx.fillRect(0,floorY,W,H-floorY);
  ctx.strokeStyle="rgba(150,130,220,.18)";ctx.lineWidth=1;
- for(let i=-8;i<=8;i++){const x=W/2+i*W/9;ctx.beginPath();ctx.moveTo(W/2+(x-W/2)*.25,floorY);ctx.lineTo(x,H);ctx.stroke();}
+ for(let i=-8;i<=8;i++){
+   const worldGrid=i*2;
+   const x=worldX(worldGrid);
+   ctx.beginPath();ctx.moveTo(W/2+(x-W/2)*.25,floorY);ctx.lineTo(x,H);ctx.stroke();
+ }
  for(let i=0;i<6;i++){const y=floorY+i*(H-floorY)/6;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
  ctx.fillStyle="rgba(255,190,100,.08)";ctx.fillRect(W*.05,floorY-3,W*.9,6);
 }
@@ -277,7 +295,7 @@ function sprite(img,x,y,h,flip=1,alpha=1,filter="none"){
 }
 // Câmera mais afastada na horizontal: mais espaço visual entre os lutadores
 // e mais tempo/espaço para as flechas atravessarem a arena.
-const worldX=x=>W/2+x*W*(W>=H?.028:.065);
+const worldX=x=>W/2+(x-cameraX)*W*(W>=H?.04:.065);
 function fighterDraw(f,img,h,flip){
  const ground=H*.78;
   // Zoom-out de verdade: reduz o lutador junto com a escala da arena.
