@@ -206,7 +206,7 @@ canvas.addEventListener("pointerup", endCameraDrag);
 canvas.addEventListener("pointercancel", endCameraDrag);
 canvas.addEventListener("lostpointercapture", e => {
   if (cameraPtr === e.pointerId) cameraPtr = null;
-}
+});
 
 function updateSkillAim(k, clientX, clientY) {
   const b = btn[k];
