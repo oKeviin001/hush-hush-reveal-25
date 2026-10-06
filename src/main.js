@@ -82,7 +82,7 @@ const input={x:0,y:0,keys:new Set()};
 function reset(){
   player={x:-5,y:0,vx:0,vy:0,facing:1,hp:MAX_HP,atk:0,hit:0,anim:0,ult:0,inv:0,stun:0,alive:true};
   enemy={x:5,y:0,vx:0,vy:0,facing:-1,hp:ENEMY_MAX_HP,atk:0,hit:0,anim:0,ai:0,shoot:0,arrowHits:0,stealth:0,stealthCd:0,ultCd:7,alive:true};
-  projectiles=[];effects=[];cds={A:0,B:0,C:0};ended=false;
+  projectiles=[];effects=[];cds={A:0,B:0,C:0};ended=false;cameraX=0;
   overlay.classList.add("hidden");roundText.textContent="ROUND "+round;fightMessage.textContent="JUGO";fightMessage.classList.remove("show");
   input.x=0;input.y=0;knob.style.transform="translate(-50%,-50%)";
 }
@@ -115,8 +115,8 @@ function cast(k){
  if(k==="C"){if(cds.C<=0){player.ult=8;cds.C=CD.C;player.inv=.35;effects.push({type:"burst",x:player.x,y:1,life:.6,max:.6});}return;}
  if(cds[k]>0)return;
  faceOpponent();
- if(k==="A"){cds.A=CD.A;projectiles.push({type:"creature",x:player.x+player.facing*1.2,y:0,vx:player.facing*7,life:1.6});}
- if(k==="B"){cds.B=CD.B;for(let i=0;i<6;i++)projectiles.push({type:"orb",x:player.x+player.facing*.8,y:.8+(i%3)*.22,vx:player.facing*(7+i*.35),life:1.25,dy:(i-2.5)*.42});}
+ if(k==="A"){cds.A=CD.A;projectiles.push({type:"creature",x:player.x+player.facing*1.2,y:0,vx:player.facing*7,life:Infinity,owner:"player"});}
+ if(k==="B"){cds.B=CD.B;for(let i=0;i<6;i++)projectiles.push({type:"orb",x:player.x+player.facing*.8,y:.8+(i%3)*.22,vx:player.facing*(7+i*.35),life:Infinity,dy:(i-2.5)*.42,owner:"player"});}
 }
 Object.entries(btn).forEach(([k,b])=>b.addEventListener("pointerdown",e=>{e.preventDefault();e.stopPropagation();b.classList.add("pressed");cast(k);setTimeout(()=>b.classList.remove("pressed"),100);}));
 overlay.addEventListener("pointerdown",()=>{if(ended){round++;reset();}});
