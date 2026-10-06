@@ -396,7 +396,6 @@ function update(dt){
       damagePlayer(player.ult>0?18:34,0);
       p.hitDone=true;
     }
-    p.life=Math.max(0,p.life-dt);
   }
   if(p.type==="arrow"&&p.ultB&&p.phase==="split"){
     p.explodeIn=Math.max(0,p.explodeIn-dt);
