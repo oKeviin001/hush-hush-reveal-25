@@ -77,6 +77,22 @@ function hash(a, b) { let h = (a * 374761393 + b * 668265263) | 0; h = Math.imul
 const rgb = (c, a = 1) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
 const mix = (a, b, t) => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
 
+/* ---------------- sprites (arte oficial do Jugo) ---------------- */
+import jugoSideUrl from "./assets/jugo-side.png";
+import jugoBackUrl from "./assets/jugo-back.png";
+import jugoUltUrl from "./assets/jugo-ult.png";
+import knightUrl from "./assets/knight.png";
+import archerUrl from "./assets/archer.png";
+import creatureUrl from "./assets/creature.png";
+const loadImg = src => { const i = new Image(); i.src = src; return i; };
+const IMG = { side: loadImg(jugoSideUrl), back: loadImg(jugoBackUrl), ult: loadImg(jugoUltUrl), knight: loadImg(knightUrl), archer: loadImg(archerUrl), creature: loadImg(creatureUrl) };
+function sprite(img, h, flip = 1) {
+  if (!img.complete || !img.naturalWidth) return false;
+  const w = h * img.naturalWidth / img.naturalHeight;
+  ctx.save(); ctx.scale(flip, 1); ctx.drawImage(img, -w / 2, -h, w, h); ctx.restore();
+  return true;
+}
+
 /* ---------------- canvas ---------------- */
 let W = 0, H = 0;
 function resize() {
@@ -104,7 +120,7 @@ function freeSpot(minR = 7, maxR = WORLD_R - 4, pad = 2) {
   }
   return { x: (rand() - .5) * 80, z: (rand() - .5) * 80 };
 }
-const BLOCK_COLORS = [[168, 52, 52], [44, 92, 170], [196, 160, 48], [52, 132, 84], [120, 70, 160]];
+const BLOCK_COLORS = [[52, 66, 140], [184, 142, 62], [104, 74, 182], [46, 104, 170], [150, 64, 104]];
 props.push({ type: "sign", x: -3.5, z: 8, r: 0.8 });
 props.push({ type: "gate", x: 0, z: 30, r: 0, w: 7 });
 for (let i = 0; i < 34; i++) { const s = freeSpot(); const size = 1.1 + rand() * 1.5; props.push({ type: "block", ...s, size, r: size * 0.75, rot: rand() * TAU, color: BLOCK_COLORS[(rand() * 5) | 0], letter: "JUGO"[(rand() * 4) | 0], stack: rand() < 0.3 }); }
@@ -691,6 +707,7 @@ function update(dt) {
     if (a.life <= 0) arrows.splice(i, 1);
   }
 
+  if (Math.random() < dt * 14) { const a = Math.random() * TAU, r = 3 + Math.random() * 18; particles.push({ x: player.x + Math.cos(a) * r, y: 0.2 + Math.random() * 2.5, z: player.z + Math.sin(a) * r, vx: (Math.random() - .5) * 0.3, vy: 0.25 + Math.random() * 0.3, vz: (Math.random() - .5) * 0.3, life: 2.5, max: 2.5, c: Math.random() < 0.7 ? [120, 150, 255] : [230, 190, 110], size: 0.035, g: 0 }); }
   // ---- particles / rings / texts ----
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i]; p.life -= dt; if (p.life <= 0) { particles.splice(i, 1); continue; }
