@@ -218,34 +218,47 @@ function updateSkillAim(k, clientX, clientY) {
   const r = b.getBoundingClientRect();
   const cx = r.left + r.width / 2;
   const cy = r.top + r.height / 2;
-  const max = Math.max(18, Math.min(34, r.width * 0.42));
+  const max = Math.max(22, Math.min(40, r.width * 0.48));
   let dx = clientX - cx;
   let dy = clientY - cy;
-  const len = Math.hypot(dx, dy) || 1;
+  const len = Math.hypot(dx, dy);
   const l = Math.min(len, max);
-  dx = dx / len * l;
-  dy = dy / len * l;
+  if (len > 0.001) {
+    dx = dx / len * l;
+    dy = dy / len * l;
+  }
 
   const knobEl = b.querySelector(".aim-knob");
   if (knobEl) knobEl.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
 
-  if (len > 5) {
-    const R = { x: Math.cos(cam.yaw), z: -Math.sin(cam.yaw) };
-    const F = { x: Math.sin(cam.yaw), z: Math.cos(cam.yaw) };
-    const sx = dx / max;
-    const sy = dy / max;
-    const wx = R.x * sx - F.x * sy;
-    const wz = R.z * sx - F.z * sy;
-    const wl = Math.hypot(wx, wz) || 1;
-    const range = k === "A" ? rangeA() : 13;
+  // O mini-joystick controla direção e distância.
+  // Centro = perto de Jugo; borda = alcance máximo.
+  const R = { x: Math.cos(cam.yaw), z: -Math.sin(cam.yaw) };
+  const F = { x: Math.sin(cam.yaw), z: Math.cos(cam.yaw) };
+  const sx = max > 0 ? dx / max : 0;
+  const sy = max > 0 ? dy / max : 0;
+  const mag = clamp(Math.hypot(sx, sy), 0, 1);
+  const wx = R.x * sx - F.x * sy;
+  const wz = R.z * sx - F.z * sy;
+  const wl = Math.hypot(wx, wz) || 1;
+  const maxRange = k === "A" ? rangeA() : 13;
+  const minRange = k === "A" ? 1.25 : 2.5;
+  const range = minRange + (maxRange - minRange) * mag;
+
+  if (mag > 0.02) {
     aimPoint = {
       x: player.x + wx / wl * range,
       z: player.z + wz / wl * range
     };
     player.facing = Math.atan2(wx / wl, wz / wl);
+  } else {
+    const f = facingVec();
+    aimPoint = {
+      x: player.x + f.x * minRange,
+      z: player.z + f.z * minRange
+    };
   }
 }
-
 function resetSkillAimVisual(k) {
   const b = btn[k];
   if (!b) return;
