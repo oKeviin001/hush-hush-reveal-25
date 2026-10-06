@@ -68,11 +68,11 @@ canvas{display:block;width:100%;height:100%}
   .round-info span{font-size:10px}
   .round-info b{font-size:15px}
   /* A câmera ficou mais afastada, então os controles também encolhem. */
-  .joystick{width:126px;height:126px;left:28px;bottom:max(24px,calc(env(safe-area-inset-bottom) + 18px))}
-  .joystick-knob{width:56px;height:56px}
-  .skill-row{right:22px;bottom:max(22px,calc(env(safe-area-inset-bottom) + 16px));width:198px;height:148px}
-  .basic-attack{width:72px;height:72px}
-  .basic-attack-icon{width:44px;height:44px}
-  .skill{width:58px;height:58px}
-  .skill-b{left:62px;width:66px;height:66px}
+  .joystick{width:118px;height:118px;left:26px;bottom:max(22px,calc(env(safe-area-inset-bottom) + 16px))}
+  .joystick-knob{width:52px;height:52px}
+  .skill-row{right:20px;bottom:max(20px,calc(env(safe-area-inset-bottom) + 14px));width:188px;height:140px}
+  .basic-attack{width:68px;height:68px}
+  .basic-attack-icon{width:41px;height:41px}
+  .skill{width:55px;height:55px}
+  .skill-b{left:59px;width:62px;height:62px}
 }
