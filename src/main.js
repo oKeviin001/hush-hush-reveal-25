@@ -2,7 +2,7 @@ import "./style.css";
 
 /* =========================================================
    JUGO — protótipo jogável (pseudo-3D em canvas 2D)
-   Terceira pessoa • joystick • A/B com mira • C ultimate
+   Terceira pessoa • joystick • câmera manual • A/B com mira • C ultimate
    ========================================================= */
 
 const app = document.querySelector("#app");
@@ -165,6 +165,48 @@ addEventListener("keyup", e => input.keys.delete(e.key.toLowerCase()));
 
 let skillAimPtr = null;
 let skillAimKey = null;
+
+// Câmera manual no lado direito: somente a faixa central/direita da tela
+// recebe o gesto de rotação. A área dos botões continua reservada às skills.
+let cameraPtr = null;
+let cameraLastX = 0;
+const cameraZone = {
+  minX: 0.34,
+  maxX: 0.98,
+  minY: 0.40,
+  maxY: 0.76
+};
+function inCameraZone(x, y) {
+  return x >= innerWidth * cameraZone.minX &&
+    x <= innerWidth * cameraZone.maxX &&
+    y >= innerHeight * cameraZone.minY &&
+    y <= innerHeight * cameraZone.maxY;
+}
+function beginCameraDrag(e) {
+  if (cameraPtr !== null || skillAimPtr !== null || joyId !== null || !player.alive) return;
+  if (!inCameraZone(e.clientX, e.clientY)) return;
+  cameraPtr = e.pointerId;
+  cameraLastX = e.clientX;
+  canvas.setPointerCapture?.(e.pointerId);
+}
+function moveCameraDrag(e) {
+  if (cameraPtr !== e.pointerId) return;
+  const dx = e.clientX - cameraLastX;
+  cameraLastX = e.clientX;
+  // Sensibilidade deliberadamente moderada para permitir pequenos ajustes.
+  cam.yaw = wrap(cam.yaw - dx * 0.010);
+}
+function endCameraDrag(e) {
+  if (cameraPtr !== e.pointerId) return;
+  cameraPtr = null;
+}
+canvas.addEventListener("pointerdown", beginCameraDrag);
+canvas.addEventListener("pointermove", moveCameraDrag);
+canvas.addEventListener("pointerup", endCameraDrag);
+canvas.addEventListener("pointercancel", endCameraDrag);
+canvas.addEventListener("lostpointercapture", e => {
+  if (cameraPtr === e.pointerId) cameraPtr = null;
+}
 
 function updateSkillAim(k, clientX, clientY) {
   const b = btn[k];
@@ -519,10 +561,8 @@ function update(dt) {
   }
 
   // ---- camera ----
-  if (spd > 0.6 && !aiming) {
-    const diff = wrap(player.facing - cam.yaw);
-    if (Math.abs(diff) < 2.3) cam.yaw += diff * damp(1.5, dt) * Math.min(1, spd / 5);
-  }
+  // A rotação agora é 100% manual pelo gesto na faixa direita da tela.
+  // Não acompanha mais automaticamente a direção de Jugo.
   cam.x += (player.x + player.vx * 0.22 - cam.x) * damp(6, dt);
   cam.z += (player.z + player.vz * 0.22 - cam.z) * damp(6, dt);
   cam.dist = lerp(cam.dist, 8.6 + spd * 0.22 + (ult ? 3 : 0), damp(3, dt));
