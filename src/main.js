@@ -278,7 +278,7 @@ function fighterDraw(f,img,h,flip){
   // Zoom-out de verdade: reduz o lutador junto com a escala da arena.
   // Assim a flecha ganha uma faixa maior de espaço para acertar ou passar.
   const landscape=W>=H;
-  const scale=landscape?clamp(H/700,.26,.34):Math.min(W/520,.68);
+  const scale=landscape?clamp(H/760,.23,.30):Math.min(W/520,.68);
   const x=worldX(f.x),y=ground-f.y*H*.075;
  const moving=Math.abs(f.vx)>.1, bob=moving?Math.abs(Math.sin(f.anim*5))*.025:Math.sin(time*2.5)*.012;
  const alpha=f===enemy&&enemy.stealth>0?.10:1;
