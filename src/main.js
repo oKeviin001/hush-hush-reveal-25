@@ -70,8 +70,8 @@ let player,enemy,projectiles,effects,cds,time=0,joyId=null,round=1,ended=false;
 const input={x:0,y:0,keys:new Set()};
 
 function reset(){
-  player={x:-5,y:0,vx:0,vy:0,facing:1,hp:MAX_HP,atk:0,hit:0,anim:0,ult:0,inv:0,alive:true};
-  enemy={x:5,y:0,vx:0,vy:0,facing:-1,hp:ENEMY_MAX_HP,atk:0,hit:0,anim:0,ai:0,shoot:0,arrowHits:0,alive:true};
+  player={x:-5,y:0,vx:0,vy:0,facing:1,hp:MAX_HP,atk:0,hit:0,anim:0,ult:0,inv:0,stun:0,alive:true};
+  enemy={x:5,y:0,vx:0,vy:0,facing:-1,hp:ENEMY_MAX_HP,atk:0,hit:0,anim:0,ai:0,shoot:0,arrowHits:0,stealth:0,stealthCd:0,ultCd:7,alive:true};
   projectiles=[];effects=[];cds={A:0,B:0,C:0};ended=false;
   overlay.classList.add("hidden");roundText.textContent="ROUND "+round;fightMessage.textContent="JUGO";fightMessage.classList.remove("show");
   input.x=0;input.y=0;knob.style.transform="translate(-50%,-50%)";
@@ -94,7 +94,7 @@ function damageEnemy(amount,knock=0){if(!enemy.alive)return;enemy.hp=Math.max(0,
 function damagePlayer(amount,knock=0){if(!player.alive||player.inv>0)return;player.hp=Math.max(0,player.hp-amount);player.hit=.18;player.vx=knock;if(player.hp<=0){player.alive=false;finish(false);}}
 
 function basicAttack(){
- if(ended||!player.alive||player.atk>0)return;
+ if(ended||!player.alive||player.atk>0||player.stun>0)return;
  faceOpponent();player.atk=.38;player.anim=.32;
  if(isNear()){damageEnemy(player.ult>0?150:55,player.facing*5);effects.push({type:"slash",x:player.x+player.facing*1.15,y:1.1,life:.22,max:.22,flip:player.facing});}
 }
@@ -117,47 +117,82 @@ function update(dt){
  time+=dt;
  if(ended){updateHud();return;}
  for(const k of Object.keys(cds))cds[k]=Math.max(0,cds[k]-dt);
- player.atk=Math.max(0,player.atk-dt);player.hit=Math.max(0,player.hit-dt);player.inv=Math.max(0,player.inv-dt);
+ player.atk=Math.max(0,player.atk-dt);player.hit=Math.max(0,player.hit-dt);player.inv=Math.max(0,player.inv-dt);player.stun=Math.max(0,player.stun-dt);
  enemy.atk=Math.max(0,enemy.atk-dt);enemy.hit=Math.max(0,enemy.hit-dt);
  const left=input.keys.has("a")||input.keys.has("arrowleft"),right=input.keys.has("d")||input.keys.has("arrowright"),up=input.keys.has("w")||input.keys.has("arrowup");
  const move=clamp(input.x+(right?1:0)-(left?1:0),-1,1);
- player.vx=move*6.2;
- if((input.y<-.45||up)&&Math.abs(player.y)<.02){player.vy=8.5;}
+ player.vx=player.stun>0?player.vx:move*6.2;
+ if(player.stun<=0&&(input.y<-.45||up)&&Math.abs(player.y)<.02){player.vy=8.5;}
  player.vy-=22*dt;player.y=Math.max(0,player.y+player.vy*dt);
  player.x=clamp(player.x+player.vx*dt,-9.2,9.2);
- if(Math.abs(player.vx)>.1)player.facing=player.vx>0?1:-1;
+ if(Math.abs(player.vx)>.1&&player.stun<=0)player.facing=player.vx>0?1:-1;
  player.anim+=dt*(Math.abs(player.vx)*1.8+2);
 
  const dx=player.x-enemy.x;
  enemy.facing=dx>=0?1:-1;
  enemy.ai+=dt;
  enemy.shoot=Math.max(0,enemy.shoot-dt);
+ enemy.stealth=Math.max(0,enemy.stealth-dt);
+ enemy.stealthCd=Math.max(0,enemy.stealthCd-dt);
+ enemy.ultCd=Math.max(0,enemy.ultCd-dt);
 
- // O arqueiro tenta manter uma distância segura e recua quando Jugo chega perto.
- const preferredDistance=6.2;
+ // IA de zoneamento: o arqueiro SEMPRE prefere aumentar a distância.
+ // Ele só se aproxima quando precisa recuperar espaço para disparar.
  const distance=Math.abs(dx);
- if(distance>preferredDistance+1.0)enemy.vx=clamp(dx*1.15,-3.8,3.8);
- else if(distance<preferredDistance-1.6)enemy.vx=clamp(-dx*1.35,-4.2,4.2);
- else enemy.vx=0;
+ const farDistance=8.0;
+ if(distance<farDistance){
+   enemy.vx=clamp(-dx*1.8,-5.2,5.2);
+ }else if(distance<9.8){
+   enemy.vx=0;
+ }else{
+   // Se Jugo ficar longe demais, aproxima apenas o suficiente para manter o alcance.
+   enemy.vx=clamp(dx*0.8,-3.0,3.0);
+ }
+
+ // Quando Jugo invade o espaço, o arqueiro pode desaparecer e atravessar a arena.
+ if(distance<5.2&&enemy.stealth<=0&&enemy.stealthCd<=0){
+   enemy.stealth=1.65;
+   enemy.stealthCd=8.0;
+   enemy.vx=enemy.facing*5.2;
+   effects.push({type:"stealth",x:enemy.x,y:1.4,life:.55,max:.55,enemy:true});
+ }
 
  enemy.x=clamp(enemy.x+enemy.vx*dt,-9.2,9.2);
  enemy.anim+=dt*(Math.abs(enemy.vx)*1.8+2);
 
- // Dispara flechas quando existe espaço suficiente.
- if(distance<10.5&&distance>2.8&&enemy.shoot<=0){
+ // Ultimate: uma flecha gigante, reta, que atordoa por 2,8 segundos.
+ // Ela só é usada com espaço suficiente para o arqueiro preparar o disparo.
+ if(distance>5.5&&distance<11&&enemy.ultCd<=0){
+   enemy.ultCd=20;
+   enemy.atk=.8;
+   enemy.anim=.65;
+   const arrowY=1.25;
+   const speed=12.5;
+   projectiles.push({type:"ultArrow",x:enemy.x+enemy.facing*1.4,y:arrowY,vx:enemy.facing*speed,vy:0,life:2.0,owner:"enemy"});
+   effects.push({type:"ultShot",x:enemy.x+enemy.facing*1.0,y:1.25,life:.45,max:.45,enemy:true});
+ }else if(distance>5.2&&distance<11&&enemy.shoot<=0){
+   // Flechas comuns são linhas retas. O padrão alterna entre três alturas/ângulos
+   // para que o jogador consiga ler e desviar no salto.
    enemy.shoot=1.35;
    enemy.atk=.48;
    enemy.anim=.45;
-   const arrowY=1.45;
-   const targetY=clamp(player.y+1.0,.65,2.2);
+   const pattern=enemy.arrowHits%3;
+   const arrowY=pattern===0?1.05:pattern===1?1.45:1.05;
+   const angle=pattern===1?.22:pattern===2?-.22:0;
    const speed=10.5;
-   const flightTime=Math.max(.12,distance/speed);
-   const vy=(targetY-arrowY)/flightTime;
-   projectiles.push({type:"arrow",x:enemy.x+enemy.facing*1.15,y:arrowY,vx:enemy.facing*speed,vy,life:1.8,owner:"enemy"});
-   effects.push({type:"bowshot",x:enemy.x+enemy.facing*.9,y:1.35,life:.16,max:.16,flip:enemy.facing,enemy:true});
+   projectiles.push({
+     type:"arrow",
+     x:enemy.x+enemy.facing*1.15,
+     y:arrowY,
+     vx:enemy.facing*speed*Math.cos(angle),
+     vy:speed*Math.sin(angle),
+     life:1.8,
+     owner:"enemy"
+   });
+   effects.push({type:"bowshot",x:enemy.x+enemy.facing*.9,y:arrowY,life:.16,max:.16,flip:enemy.facing,enemy:true});
  }
 
- // Se Jugo encostar, o arqueiro ainda tenta o ataque corpo a corpo.
+ // Corpo a corpo é apenas um último recurso.
  if(distance<1.9&&Math.abs(player.y-enemy.y)<1.2&&enemy.atk<=0){
    enemy.atk=.85;
    enemy.anim=.35;
@@ -168,12 +203,10 @@ function update(dt){
  for(let i=projectiles.length-1;i>=0;i--){
   const p=projectiles[i];
   p.x+=p.vx*dt;
-  p.y+=(p.dy||p.vy||0)*dt;
-  if(p.owner==="enemy"&&p.vy)p.vy-=4.5*dt;
+  p.y+=(p.vy||p.dy||0)*dt;
   p.life-=dt;
 
   if(p.type==="arrow"&&Math.abs(p.x-player.x)<.85&&Math.abs(p.y-(player.y+1))<.85){
-    // A cada segunda flecha que REALMENTE acerta, o arqueiro aplica knock-up.
     enemy.arrowHits++;
     const knockUp=enemy.arrowHits%2===0;
     damagePlayer(player.ult>0?22:38,-Math.sign(p.vx)*(knockUp?6.5:2.2));
@@ -186,6 +219,18 @@ function update(dt){
     }
     p.life=0;
   }
+
+  if(p.type==="ultArrow"&&Math.abs(p.x-player.x)<1.35&&Math.abs(p.y-(player.y+1))<1.15){
+    damagePlayer(player.ult>0?30:55,-Math.sign(p.vx)*7);
+    if(player.alive){
+      player.stun=2.8;
+      player.vx=-Math.sign(p.vx)*7;
+      player.vy=7.5;
+      effects.push({type:"stun",x:player.x,y:player.y+1.2,life:2.8,max:2.8});
+    }
+    p.life=0;
+  }
+
   if(p.type==="orb"&&Math.abs(p.x-enemy.x)<1.0&&Math.abs(p.y-1)<1.35){damageEnemy(player.ult>0?45:18,player.facing*1.5);p.life=0;effects.push({type:"hit",x:p.x,y:p.y,life:.2,max:.2});}
   if(p.type==="creature"&&Math.abs(p.x-enemy.x)<1.15&&Math.abs(p.y-enemy.y)<1.4){damageEnemy(player.ult>0?95:50,player.facing*4);p.life=0;effects.push({type:"hit",x:p.x,y:1,life:.3,max:.3});}
   if(p.life<=0||Math.abs(p.x)>12||p.y<-1||p.y>4)projectiles.splice(i,1);
@@ -211,7 +256,8 @@ function sprite(img,x,y,h,flip=1,alpha=1,filter="none"){
 function fighterDraw(f,img,h,flip){
  const ground=H*.78,scale=Math.min(W/900,1.15),x=W/2+f.x*W*.035,y=ground-f.y*H*.075;
  const moving=Math.abs(f.vx)>.1, bob=moving?Math.abs(Math.sin(f.anim*5))*.025:Math.sin(time*2.5)*.012;
- sprite(img,x,y-bob*H,h*scale,flip,1,f.hit>0?"brightness(2) saturate(.5)":"none");
+ const alpha=f===enemy&&enemy.stealth>0?.10:1;
+ sprite(img,x,y-bob*H,h*scale,flip,alpha,f.hit>0?"brightness(2) saturate(.5)":"none");
 }
 function draw(){
  drawBackground();
@@ -237,6 +283,19 @@ function draw(){
      ctx.strokeStyle="#d89a55";ctx.lineWidth=2;
      ctx.beginPath();ctx.moveTo(-28,0);ctx.lineTo(-38,-6);ctx.moveTo(-28,0);ctx.lineTo(-38,6);ctx.stroke();
      ctx.restore();
+   }else if(p.type==="ultArrow"){
+     const angle=Math.atan2(-(p.vy||0),p.vx);
+     ctx.save();ctx.translate(x,y-4);ctx.rotate(angle);ctx.globalCompositeOperation="lighter";
+     ctx.strokeStyle="rgba(255,80,80,.28)";ctx.lineWidth=22;
+     ctx.beginPath();ctx.moveTo(-70,0);ctx.lineTo(42,0);ctx.stroke();
+     ctx.globalCompositeOperation="source-over";
+     ctx.strokeStyle="#ff6b58";ctx.lineWidth=11;
+     ctx.beginPath();ctx.moveTo(-68,0);ctx.lineTo(42,0);ctx.stroke();
+     ctx.fillStyle="#fff1d0";
+     ctx.beginPath();ctx.moveTo(60,0);ctx.lineTo(34,-18);ctx.lineTo(39,0);ctx.lineTo(34,18);ctx.closePath();ctx.fill();
+     ctx.strokeStyle="#d94c48";ctx.lineWidth=5;
+     ctx.beginPath();ctx.moveTo(-62,0);ctx.lineTo(-86,-15);ctx.moveTo(-62,0);ctx.lineTo(-86,15);ctx.stroke();
+     ctx.restore();
    }else{
      ctx.fillStyle="rgba(90,190,255,.25)";ctx.beginPath();ctx.arc(x,y-20,22,0,TAU);ctx.fill();
      ctx.fillStyle="#75d8ff";ctx.beginPath();ctx.arc(x,y-20,8,0,TAU);ctx.fill();
@@ -255,7 +314,7 @@ function draw(){
  }
  if(player.x<enemy.x){fighterDraw(player,player.ult>0?IMG.ult:IMG.jugo,player.ult>0?330:285,1);fighterDraw(enemy,IMG.archer,270,-1);}
  else{fighterDraw(enemy,IMG.archer,270,1);fighterDraw(player,player.ult>0?IMG.ult:IMG.jugo,player.ult>0?330:285,-1);}
- for(const e of effects){const x=W/2+e.x*W*.035,y=floorY-e.y*H*.075;const k=e.life/e.max;if(e.type==="slash"){ctx.save();ctx.translate(x,y);ctx.scale(e.flip,1);ctx.globalCompositeOperation="lighter";ctx.strokeStyle=e.enemy?"rgba(255,100,90,.9)":"rgba(130,220,255,.95)";ctx.lineWidth=8*k;ctx.beginPath();ctx.arc(0,0,65*(1-k)+35,-1.1,1.0);ctx.stroke();ctx.restore();}else if(e.type==="hit"){ctx.fillStyle=`rgba(255,230,170,${k})`;ctx.beginPath();ctx.arc(x,y,45*(1-k)+8,0,TAU);ctx.fill();}else{ctx.fillStyle=`rgba(255,210,130,${k*.5})`;ctx.beginPath();ctx.arc(x,y,120*(1-k)+10,0,TAU);ctx.fill();}}
+ for(const e of effects){const x=W/2+e.x*W*.035,y=floorY-e.y*H*.075;const k=e.life/e.max;if(e.type==="slash"){ctx.save();ctx.translate(x,y);ctx.scale(e.flip,1);ctx.globalCompositeOperation="lighter";ctx.strokeStyle=e.enemy?"rgba(255,100,90,.9)":"rgba(130,220,255,.95)";ctx.lineWidth=8*k;ctx.beginPath();ctx.arc(0,0,65*(1-k)+35,-1.1,1.0);ctx.stroke();ctx.restore();}else if(e.type==="hit"){ctx.fillStyle=`rgba(255,230,170,${k})`;ctx.beginPath();ctx.arc(x,y,45*(1-k)+8,0,TAU);ctx.fill();}else if(e.type==="stealth"){ctx.strokeStyle=`rgba(150,220,255,${k*.7})`;ctx.lineWidth=5;ctx.beginPath();ctx.arc(x,y,40+50*(1-k),0,TAU);ctx.stroke();}else if(e.type==="stun"){ctx.save();ctx.translate(x,y);ctx.globalCompositeOperation="lighter";ctx.strokeStyle=`rgba(255,220,80,${k})`;ctx.lineWidth=5;ctx.beginPath();ctx.arc(0,0,38+12*Math.sin(time*10),0,TAU);ctx.stroke();ctx.fillStyle=`rgba(255,245,170,${k})`;ctx.font="bold 28px sans-serif";ctx.textAlign="center";ctx.fillText("STUN",0,-35);ctx.restore();}else{ctx.fillStyle=`rgba(255,210,130,${k*.5})`;ctx.beginPath();ctx.arc(x,y,120*(1-k)+10,0,TAU);ctx.fill();}}
  // center line
  ctx.strokeStyle="rgba(255,220,150,.25)";ctx.setLineDash([8,10]);ctx.beginPath();ctx.moveTo(W/2,floorY-15);ctx.lineTo(W/2,floorY+10);ctx.stroke();ctx.setLineDash([]);
 }
