@@ -236,7 +236,7 @@ function update(dt){
   p.y+=(p.vy||p.dy||0)*dt;
   p.life-=dt;
 
-  if(p.type==="arrow"&&Math.abs(p.x-player.x)<1.05&&p.y>=player.y&&p.y<=player.y+1.45){
+  if(p.type==="arrow"&&Math.abs(p.x-player.x)<.78&&p.y>=player.y+.08&&p.y<=player.y+1.30){
     enemy.arrowHits++;
     const knockUp=enemy.arrowHits%2===0;
     // O impacto sempre empurra o Jugo PARA LONGE da flecha, nunca em direção ao arqueiro.
@@ -321,15 +321,15 @@ function draw(){
      const angle=Math.atan2(-(p.vy||0),p.vx);
      ctx.save();ctx.translate(x,y-4);ctx.rotate(angle);
      ctx.globalCompositeOperation="lighter";
-     ctx.strokeStyle="rgba(255,220,150,.3)";ctx.lineWidth=8;
-     ctx.beginPath();ctx.moveTo(-30,0);ctx.lineTo(12,0);ctx.stroke();
+     ctx.strokeStyle="rgba(255,220,150,.24)";ctx.lineWidth=5;
+     ctx.beginPath();ctx.moveTo(-20,0);ctx.lineTo(8,0);ctx.stroke();
      ctx.globalCompositeOperation="source-over";
-     ctx.strokeStyle="#f4d08a";ctx.lineWidth=4;
-     ctx.beginPath();ctx.moveTo(-28,0);ctx.lineTo(12,0);ctx.stroke();
+     ctx.strokeStyle="#f4d08a";ctx.lineWidth=2.5;
+     ctx.beginPath();ctx.moveTo(-19,0);ctx.lineTo(8,0);ctx.stroke();
      ctx.fillStyle="#fff0bd";
-     ctx.beginPath();ctx.moveTo(18,0);ctx.lineTo(7,-7);ctx.lineTo(9,0);ctx.lineTo(7,7);ctx.closePath();ctx.fill();
-     ctx.strokeStyle="#d89a55";ctx.lineWidth=2;
-     ctx.beginPath();ctx.moveTo(-28,0);ctx.lineTo(-38,-6);ctx.moveTo(-28,0);ctx.lineTo(-38,6);ctx.stroke();
+     ctx.beginPath();ctx.moveTo(13,0);ctx.lineTo(6,-5);ctx.lineTo(7,0);ctx.lineTo(6,5);ctx.closePath();ctx.fill();
+     ctx.strokeStyle="#d89a55";ctx.lineWidth=1.4;
+     ctx.beginPath();ctx.moveTo(-19,0);ctx.lineTo(-26,-4);ctx.moveTo(-19,0);ctx.lineTo(-26,4);ctx.stroke();
      ctx.restore();
    }else if(p.type==="ultArrow"){
      const angle=Math.atan2(-(p.vy||0),p.vx);
