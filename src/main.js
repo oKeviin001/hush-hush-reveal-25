@@ -8,6 +8,37 @@ import creatureUrl from "./assets/creature.png";
 const app = document.querySelector("#app");
 app.innerHTML = `
 <main class="game-shell fighter-shell">
+  <section class="menu-screen intro-screen" id="introScreen">
+    <div class="veil-mark">Ø</div><div class="veil-title">VEILØRIS</div>
+    <div class="veil-subtitle">UM PROJETO KEVIN'S</div><div class="intro-line"></div>
+  </section>
+  <section class="menu-screen main-menu hidden" id="mainMenu">
+    <div class="menu-brand">VEILØRIS</div><div class="menu-kicker">TEST BUILD</div>
+    <button class="menu-button locked" disabled>JOGAR <span>EM BREVE</span></button>
+    <button class="menu-button primary" id="testButton">TESTAR</button>
+    <div class="menu-version">PROTÓTIPO DE COMBATE • 01</div>
+  </section>
+  <section class="menu-screen select-screen hidden" id="characterSelect">
+    <div class="select-top"><span>VEILØRIS</span><b>ESCOLHA SEU PERSONAGEM</b></div>
+    <div class="selection-grid">
+      <button class="character-card selected"><div class="character-art"><img src="__JUGO__" alt="Jugo"></div><strong>JUGO</strong><small>DISPONÍVEL</small></button>
+      <button class="character-card locked" disabled><div class="question">?</div><strong>DESCONHECIDO</strong><small>BLOQUEADO</small></button>
+      <button class="character-card locked" disabled><div class="question">?</div><strong>DESCONHECIDO</strong><small>BLOQUEADO</small></button>
+      <button class="character-card locked" disabled><div class="question">?</div><strong>DESCONHECIDO</strong><small>BLOQUEADO</small></button>
+      <button class="character-card locked" disabled><div class="question">?</div><strong>DESCONHECIDO</strong><small>BLOQUEADO</small></button>
+      <button class="character-card locked" disabled><div class="question">?</div><strong>DESCONHECIDO</strong><small>BLOQUEADO</small></button>
+    </div>
+    <button class="select-confirm" id="characterConfirm">CONTINUAR</button>
+  </section>
+  <section class="menu-screen select-screen hidden" id="opponentSelect">
+    <div class="select-top"><span>VEILØRIS</span><b>ESCOLHA O OPONENTE</b></div>
+    <div class="opponent-grid">
+      <button class="character-card locked" disabled><div class="character-art"><img src="__KNIGHT__" alt="Cavaleiro"></div><strong>CAVALEIRO</strong><small>BLOQUEADO</small></button>
+      <button class="character-card selected" id="archerChoice"><div class="character-art"><img src="__ARCHER__" alt="Arqueiro"></div><strong>ARQUEIRO</strong><small>DISPONÍVEL</small></button>
+    </div>
+    <button class="select-confirm" id="opponentConfirm">TESTAR CONTRA O ARQUEIRO</button>
+  </section>
+  <div class="game-layer hidden" id="gameLayer">
   <canvas id="game" aria-label="Arena de luta 1 contra 1"></canvas>
 
   <div class="hud fighter-hud">
@@ -47,8 +78,16 @@ app.innerHTML = `
 
   <div class="hint fighter-hint">JOYSTICK ← → mover • ↑ pular • ATAQUE para golpear • A/B habilidades • C ultimate</div>
   <div class="overlay hidden" id="overlay"><h1 id="overlayTitle">JUGO VENCEU</h1><p>TOQUE PARA NOVA LUTA</p></div>
+  </div>
 </main>`;
 
+const introScreen=document.querySelector("#introScreen"),mainMenu=document.querySelector("#mainMenu"),characterSelect=document.querySelector("#characterSelect"),opponentSelect=document.querySelector("#opponentSelect"),gameLayer=document.querySelector("#gameLayer"),testButton=document.querySelector("#testButton"),characterConfirm=document.querySelector("#characterConfirm"),opponentConfirm=document.querySelector("#opponentConfirm");
+let screen="intro";
+function showScreen(next){screen=next;[introScreen,mainMenu,characterSelect,opponentSelect,gameLayer].forEach(el=>el.classList.add("hidden"));const target={intro:introScreen,menu:mainMenu,characters:characterSelect,opponents:opponentSelect,game:gameLayer}[next];if(target)target.classList.remove("hidden");}
+setTimeout(()=>showScreen("menu"),1900);
+testButton.addEventListener("click",()=>showScreen("characters"));
+characterConfirm.addEventListener("click",()=>showScreen("opponents"));
+opponentConfirm.addEventListener("click",()=>{showScreen("game");reset();});
 const canvas=document.querySelector("#game"),ctx=canvas.getContext("2d");
 const joystick=document.querySelector("#joystick"),knob=document.querySelector("#joystickKnob");
 const basic=document.querySelector("#basicAttack"),overlay=document.querySelector("#overlay");
@@ -373,5 +412,5 @@ function updateHud(){
  roundText.textContent=player.ult>0?"FORMA ULTIMATE":"ROUND "+round;
 }
 let last=performance.now();
-function loop(now){const dt=Math.min(.033,(now-last)/1000);last=now;update(dt);draw();requestAnimationFrame(loop);}
+function loop(now){const dt=Math.min(.033,(now-last)/1000);last=now;if(screen==="game"){update(dt);draw();}requestAnimationFrame(loop);}
 requestAnimationFrame(loop);
