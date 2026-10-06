@@ -373,7 +373,7 @@ function update(dt){
     p.life=0;
   }
 
-  if(p.type==="arrow"&&p.ultB&&p.phase==="travel"&&!p.split&&Math.abs(p.x-player.x)<=2.2){
+  if(p.type==="arrow"&&p.ultB&&p.phase==="travel"&&!p.split&&Math.abs(p.x-player.x)<=3.0){
     // A flecha normal chega perto do Jugo e se divide imediatamente.
     p.split=true;
     p.phase="split";
@@ -498,6 +498,21 @@ function draw(){
      ctx.beginPath();ctx.moveTo(-len,0);ctx.lineTo(len*.35,0);ctx.stroke();
      ctx.strokeStyle="#fff8bd";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-len,0);ctx.lineTo(len*.35,0);ctx.stroke();
      ctx.fillStyle=yellow?"#fff36a":"#fff0bd";ctx.beginPath();ctx.moveTo(len*.58,0);ctx.lineTo(len*.25,-7);ctx.lineTo(len*.35,0);ctx.lineTo(len*.25,7);ctx.closePath();ctx.fill();
+     ctx.restore();
+   }else if(p.type==="pierceArrow"){
+     // As duas flechas da B usam a mesma arte de flecha normal, agora grudadas no Jugo.
+     const angle=p.offsetY<1?-.35:Math.PI+.35;
+     ctx.save();ctx.translate(x,y-4);ctx.rotate(angle);
+     ctx.globalCompositeOperation="lighter";
+     ctx.strokeStyle="rgba(255,245,70,.9)";ctx.lineWidth=7;
+     ctx.beginPath();ctx.moveTo(-20,0);ctx.lineTo(8,0);ctx.stroke();
+     ctx.globalCompositeOperation="source-over";
+     ctx.strokeStyle="#fff36a";ctx.lineWidth=3.5;
+     ctx.beginPath();ctx.moveTo(-19,0);ctx.lineTo(8,0);ctx.stroke();
+     ctx.fillStyle="#fff36a";
+     ctx.beginPath();ctx.moveTo(13,0);ctx.lineTo(6,-5);ctx.lineTo(7,0);ctx.lineTo(6,5);ctx.closePath();ctx.fill();
+     ctx.strokeStyle="#d89a55";ctx.lineWidth=1.4;
+     ctx.beginPath();ctx.moveTo(-19,0);ctx.lineTo(-26,-4);ctx.moveTo(-19,0);ctx.lineTo(-26,4);ctx.stroke();
      ctx.restore();
    }else if(p.type==="ultArrow"){
      const angle=Math.atan2(-(p.vy||0),p.vx);
