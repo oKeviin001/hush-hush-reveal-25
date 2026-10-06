@@ -40,7 +40,17 @@ app.innerHTML = `
         <div class="joystick-ring"></div>
         <div class="joystick-knob" id="joystickKnob"></div>
       </div>
-      <div class="skill-row">
+      <div class="skill-row" aria-label="Controles de combate">
+        <button class="basic-attack" id="basicAttack" aria-label="Ataque básico">
+          <svg class="basic-attack-icon" viewBox="0 0 64 64" aria-hidden="true">
+            <path d="M32 8v48" />
+            <path d="M28 18C20 12 11 12 5 17v12c7-2 15-1 23 5" />
+            <path d="M36 18C44 12 53 12 59 17v12c-7-2-15-1-23 5" />
+            <path d="M28 18l-5 10M36 18l5 10" />
+          </svg>
+          <span class="basic-label">ATAQUE</span>
+          <span class="basic-cd"></span>
+        </button>
         <button class="skill skill-a" data-skill="A" aria-label="Habilidade A — Criatura"><span class="key">A</span><span class="lbl">CRIATURA</span><span class="cd"></span><span class="cdt"></span><span class="aim-stick" aria-hidden="true"><span class="aim-knob"></span></span></button>
         <button class="skill skill-b" data-skill="B" aria-label="Habilidade B — Esferas"><span class="key">B</span><span class="lbl">ESFERAS</span><span class="cd"></span><span class="cdt"></span><span class="aim-stick" aria-hidden="true"><span class="aim-knob"></span></span></button>
         <button class="skill skill-c" data-skill="C" aria-label="Ultimate"><span class="key">C</span><span class="lbl">ULTIMATE</span><span class="cd"></span><span class="cdt"></span></button>
@@ -48,7 +58,7 @@ app.innerHTML = `
     </div>
 
     <div class="overlay hidden" id="overlay"><h1>JUGO CAIU</h1><p>TOQUE PARA VOLTAR</p></div>
-    <div class="hint">JOYSTICK / WASD mover • A/B: segure e arraste para mirar • solte para lançar • C ultimate</div>
+    <div class="hint">JOYSTICK / WASD mover • ATAQUE básico: toque • A/B: segure e arraste para mirar • C ultimate</div>
   </main>
 `;
 
@@ -62,6 +72,7 @@ const $score = document.querySelector("#score");
 const $status = document.querySelector("#status");
 const $aimHint = document.querySelector("#aimHint");
 const $overlay = document.querySelector("#overlay");
+const $basicAttack = document.querySelector("#basicAttack");
 const btn = {};
 document.querySelectorAll(".skill").forEach(b => (btn[b.dataset.skill] = b));
 
@@ -175,6 +186,7 @@ addEventListener("keydown", e => {
   if (k === "j" || k === "1") pressSkill("A");
   if (k === "k" || k === "2") pressSkill("B");
   if (k === "l" || k === "3") pressSkill("C");
+  if (k === " " || k === "enter") basicAttack();
   if (k === "escape") aiming = null;
 });
 addEventListener("keyup", e => input.keys.delete(e.key.toLowerCase()));
@@ -351,6 +363,37 @@ canvas.addEventListener("pointerdown", e => {
 $overlay.addEventListener("pointerdown", () => reset());
 
 function deny(k) { btn[k].classList.remove("denied"); void btn[k].offsetWidth; btn[k].classList.add("denied"); }
+
+function basicAttack() {
+  if (!player.alive || player.dash || player.atkCd > 0) return;
+
+  const reach = player.ult > 0 ? 3.6 : 2.45;
+  let best = null, bestDist = reach;
+  for (const e of enemies) {
+    if (e.dead) continue;
+    const d = dist(e, player);
+    if (d < bestDist) { bestDist = d; best = e; }
+  }
+
+  // Ataque básico não tem mira: escolhe automaticamente o inimigo corpo a corpo mais próximo.
+  if (best) {
+    const dx = best.x - player.x, dz = best.z - player.z, l = Math.hypot(dx, dz) || 1;
+    player.facing = Math.atan2(dx, dz);
+    damageEnemy(best, player.ult > 0 ? 120 : 45, dx / l * (player.ult > 0 ? 8 : 3), dz / l * (player.ult > 0 ? 8 : 3));
+    if (player.ult > 0) shake = Math.max(shake, 0.25);
+  }
+
+  player.atkCd = player.ult > 0 ? 0.55 : 0.7;
+  player.slash = 0.28;
+  $basicAttack.classList.add("pressed");
+  setTimeout(() => $basicAttack.classList.remove("pressed"), 90);
+}
+
+$basicAttack.addEventListener("pointerdown", e => {
+  e.preventDefault();
+  e.stopPropagation();
+  basicAttack();
+});
 
 function pressSkill(k) {
   if (!player.alive) return;
@@ -578,20 +621,9 @@ function update(dt) {
   player.spin = Math.max(0, player.spin - dt);
   player.hurt = Math.max(0, player.hurt - dt);
 
-  // auto attack
-  player.atkCd -= dt;
-  if (player.alive && player.atkCd <= 0 && !player.dash) {
-    const reach = ult ? 3.4 : 2.3;
-    let best = null, bd = reach;
-    for (const e of enemies) { if (e.dead) continue; const d = dist(e, player); if (d < bd) { bd = d; best = e; } }
-    if (best) {
-      player.atkCd = ult ? 0.55 : 0.7; player.slash = 0.28;
-      const dx = best.x - player.x, dz = best.z - player.z, l = Math.hypot(dx, dz) || 1;
-      player.facing = Math.atan2(dx, dz);
-      damageEnemy(best, ult ? 120 : 45, dx / l * (ult ? 8 : 3), dz / l * (ult ? 8 : 3));
-      if (ult) shake = Math.max(shake, 0.25);
-    }
-  }
+  // Ataque básico manual: o toque no botão dispara o golpe.
+  // Aqui apenas contamos o cooldown entre os toques.
+  player.atkCd = Math.max(0, player.atkCd - dt);
 
   // ---- camera ----
   // A rotação agora é 100% manual pelo gesto na faixa direita da tela.
