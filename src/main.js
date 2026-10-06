@@ -132,7 +132,7 @@ function update(dt){
  const left=input.keys.has("a")||input.keys.has("arrowleft"),right=input.keys.has("d")||input.keys.has("arrowright"),up=input.keys.has("w")||input.keys.has("arrowup");
  const move=clamp(input.x+(right?1:0)-(left?1:0),-1,1);
  player.vx=player.stun>0?player.vx:move*6.2;
- if(player.stun<=0&&(input.y<-.45||up)&&Math.abs(player.y)<.02){player.vy=8.5;}
+ if(player.stun<=0&&(input.y<-.45||up)&&Math.abs(player.y)<.02){player.vy=9.5;}
  player.vy-=22*dt;player.y=Math.max(0,player.y+player.vy*dt);
  player.x=clamp(player.x+player.vx*dt,-17,17);
  if(Math.abs(player.vx)>.1&&player.stun<=0)player.facing=player.vx>0?1:-1;
