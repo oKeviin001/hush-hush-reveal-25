@@ -71,7 +71,7 @@ const input={x:0,y:0,keys:new Set()};
 
 function reset(){
   player={x:-5,y:0,vx:0,vy:0,facing:1,hp:MAX_HP,atk:0,hit:0,anim:0,ult:0,inv:0,alive:true};
-  enemy={x:5,y:0,vx:0,vy:0,facing:-1,hp:ENEMY_MAX_HP,atk:0,hit:0,anim:0,ai:0,alive:true};
+  enemy={x:5,y:0,vx:0,vy:0,facing:-1,hp:ENEMY_MAX_HP,atk:0,hit:0,anim:0,ai:0,shoot:0,alive:true};
   projectiles=[];effects=[];cds={A:0,B:0,C:0};ended=false;
   overlay.classList.add("hidden");roundText.textContent="ROUND "+round;fightMessage.textContent="JUGO";fightMessage.classList.remove("show");
   input.x=0;input.y=0;knob.style.transform="translate(-50%,-50%)";
@@ -131,16 +131,55 @@ function update(dt){
  const dx=player.x-enemy.x;
  enemy.facing=dx>=0?1:-1;
  enemy.ai+=dt;
- const desired=player.x-enemy.facing*1.75;
- if(Math.abs(dx)>2.05)enemy.vx=clamp((desired-enemy.x)*2.4,-3.4,3.4);else enemy.vx=0;
- enemy.x=clamp(enemy.x+enemy.vx*dt,-9.2,9.2);enemy.anim+=dt*(Math.abs(enemy.vx)*1.8+2);
- if(Math.abs(dx)<2.1&&Math.abs(player.y-enemy.y)<1.2&&enemy.atk<=0&&Math.random()<dt*.95){enemy.atk=.85;enemy.anim=.35;damagePlayer(player.ult>0?28:45,-enemy.facing*3);effects.push({type:"slash",x:enemy.x+enemy.facing*1.1,y:1.1,life:.18,max:.18,flip:enemy.facing,enemy:true});}
+ enemy.shoot=Math.max(0,enemy.shoot-dt);
+
+ // O arqueiro tenta manter uma distância segura e recua quando Jugo chega perto.
+ const preferredDistance=6.2;
+ const distance=Math.abs(dx);
+ if(distance>preferredDistance+1.0)enemy.vx=clamp(dx*1.15,-3.8,3.8);
+ else if(distance<preferredDistance-1.6)enemy.vx=clamp(-dx*1.35,-4.2,4.2);
+ else enemy.vx=0;
+
+ enemy.x=clamp(enemy.x+enemy.vx*dt,-9.2,9.2);
+ enemy.anim+=dt*(Math.abs(enemy.vx)*1.8+2);
+
+ // Dispara flechas quando existe espaço suficiente.
+ if(distance<10.5&&distance>2.8&&enemy.shoot<=0){
+   enemy.shoot=1.35;
+   enemy.atk=.48;
+   enemy.anim=.45;
+   const arrowY=1.45;
+   const targetY=clamp(player.y+1.0,.65,2.2);
+   const speed=10.5;
+   const flightTime=Math.max(.12,distance/speed);
+   const vy=(targetY-arrowY)/flightTime;
+   projectiles.push({type:"arrow",x:enemy.x+enemy.facing*1.15,y:arrowY,vx:enemy.facing*speed,vy,life:1.8,owner:"enemy"});
+   effects.push({type:"bowshot",x:enemy.x+enemy.facing*.9,y:1.35,life:.16,max:.16,flip:enemy.facing,enemy:true});
+ }
+
+ // Se Jugo encostar, o arqueiro ainda tenta o ataque corpo a corpo.
+ if(distance<1.9&&Math.abs(player.y-enemy.y)<1.2&&enemy.atk<=0){
+   enemy.atk=.85;
+   enemy.anim=.35;
+   damagePlayer(player.ult>0?28:45,-enemy.facing*3);
+   effects.push({type:"slash",x:enemy.x+enemy.facing*1.1,y:1.1,life:.18,max:.18,flip:enemy.facing,enemy:true});
+ }
 
  for(let i=projectiles.length-1;i>=0;i--){
-  const p=projectiles[i];p.x+=p.vx*dt;p.y+=(p.dy||0)*dt;p.life-=dt;
+  const p=projectiles[i];
+  p.x+=p.vx*dt;
+  p.y+=(p.dy||p.vy||0)*dt;
+  if(p.owner==="enemy"&&p.vy)p.vy-=4.5*dt;
+  p.life-=dt;
+
+  if(p.type==="arrow"&&Math.abs(p.x-player.x)<.85&&Math.abs(p.y-(player.y+1))<.85){
+    damagePlayer(player.ult>0?22:38,-Math.sign(p.vx)*2.2);
+    p.life=0;
+    effects.push({type:"hit",x:p.x,y:p.y,life:.2,max:.2});
+  }
   if(p.type==="orb"&&Math.abs(p.x-enemy.x)<1.0&&Math.abs(p.y-1)<1.35){damageEnemy(player.ult>0?45:18,player.facing*1.5);p.life=0;effects.push({type:"hit",x:p.x,y:p.y,life:.2,max:.2});}
   if(p.type==="creature"&&Math.abs(p.x-enemy.x)<1.15&&Math.abs(p.y-enemy.y)<1.4){damageEnemy(player.ult>0?95:50,player.facing*4);p.life=0;effects.push({type:"hit",x:p.x,y:1,life:.3,max:.3});}
-  if(p.life<=0||Math.abs(p.x)>12)projectiles.splice(i,1);
+  if(p.life<=0||Math.abs(p.x)>12||p.y<-1||p.y>4)projectiles.splice(i,1);
  }
  for(let i=effects.length-1;i>=0;i--){effects[i].life-=dt;if(effects[i].life<=0)effects.splice(i,1);}
  updateHud();
@@ -171,7 +210,29 @@ function draw(){
  // shadows
  for(const f of [player,enemy]){const x=W/2+f.x*W*.035;ctx.fillStyle="rgba(0,0,0,.42)";ctx.beginPath();ctx.ellipse(x,floorY+3,45,10,0,0,TAU);ctx.fill();}
  // projectiles behind fighters
- for(const p of projectiles){const x=W/2+p.x*W*.035,y=floorY-p.y*H*.075; if(p.type==="creature")sprite(IMG.creature,x,y-10,72,player.facing);else{ctx.fillStyle="rgba(90,190,255,.25)";ctx.beginPath();ctx.arc(x,y-20,22,0,TAU);ctx.fill();ctx.fillStyle="#75d8ff";ctx.beginPath();ctx.arc(x,y-20,8,0,TAU);ctx.fill();}}
+ for(const p of projectiles){
+   const x=W/2+p.x*W*.035,y=floorY-p.y*H*.075;
+   if(p.type==="creature"){
+     sprite(IMG.creature,x,y-10,72,player.facing);
+   }else if(p.type==="arrow"){
+     const angle=Math.atan2(-(p.vy||0),p.vx);
+     ctx.save();ctx.translate(x,y-4);ctx.rotate(angle);
+     ctx.globalCompositeOperation="lighter";
+     ctx.strokeStyle="rgba(255,220,150,.3)";ctx.lineWidth=8;
+     ctx.beginPath();ctx.moveTo(-30,0);ctx.lineTo(12,0);ctx.stroke();
+     ctx.globalCompositeOperation="source-over";
+     ctx.strokeStyle="#f4d08a";ctx.lineWidth=4;
+     ctx.beginPath();ctx.moveTo(-28,0);ctx.lineTo(12,0);ctx.stroke();
+     ctx.fillStyle="#fff0bd";
+     ctx.beginPath();ctx.moveTo(18,0);ctx.lineTo(7,-7);ctx.lineTo(9,0);ctx.lineTo(7,7);ctx.closePath();ctx.fill();
+     ctx.strokeStyle="#d89a55";ctx.lineWidth=2;
+     ctx.beginPath();ctx.moveTo(-28,0);ctx.lineTo(-38,-6);ctx.moveTo(-28,0);ctx.lineTo(-38,6);ctx.stroke();
+     ctx.restore();
+   }else{
+     ctx.fillStyle="rgba(90,190,255,.25)";ctx.beginPath();ctx.arc(x,y-20,22,0,TAU);ctx.fill();
+     ctx.fillStyle="#75d8ff";ctx.beginPath();ctx.arc(x,y-20,8,0,TAU);ctx.fill();
+   }
+ }
  if(player.x<enemy.x){fighterDraw(player,player.ult>0?IMG.ult:IMG.jugo,player.ult>0?330:285,1);fighterDraw(enemy,IMG.archer,270,-1);}
  else{fighterDraw(enemy,IMG.archer,270,1);fighterDraw(player,player.ult>0?IMG.ult:IMG.jugo,player.ult>0?330:285,-1);}
  for(const e of effects){const x=W/2+e.x*W*.035,y=floorY-e.y*H*.075;const k=e.life/e.max;if(e.type==="slash"){ctx.save();ctx.translate(x,y);ctx.scale(e.flip,1);ctx.globalCompositeOperation="lighter";ctx.strokeStyle=e.enemy?"rgba(255,100,90,.9)":"rgba(130,220,255,.95)";ctx.lineWidth=8*k;ctx.beginPath();ctx.arc(0,0,65*(1-k)+35,-1.1,1.0);ctx.stroke();ctx.restore();}else if(e.type==="hit"){ctx.fillStyle=`rgba(255,230,170,${k})`;ctx.beginPath();ctx.arc(x,y,45*(1-k)+8,0,TAU);ctx.fill();}else{ctx.fillStyle=`rgba(255,210,130,${k*.5})`;ctx.beginPath();ctx.arc(x,y,120*(1-k)+10,0,TAU);ctx.fill();}}
