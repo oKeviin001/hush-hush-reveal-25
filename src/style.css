@@ -113,3 +113,12 @@ canvas{display:block;width:100%;height:100%}
 .menu-screen:not(.hidden){pointer-events:auto}
 .menu-screen.hidden{pointer-events:none}
 .menu-button,.character-card,.select-confirm{position:relative;z-index:2;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+
+/* Ultimate choice / feedback */
+.ult-choice{position:absolute;left:50%;top:54%;transform:translate(-50%,-50%);z-index:120;display:flex;flex-direction:column;align-items:center;gap:12px;padding:14px 18px;border:1px solid rgba(230,190,255,.45);border-radius:14px;background:rgba(8,4,14,.92);box-shadow:0 12px 45px rgba(0,0,0,.55),0 0 35px rgba(160,80,230,.2);backdrop-filter:blur(7px);color:#f6eaff;pointer-events:auto}
+.ult-choice-title{font:900 11px "Rajdhani","Segoe UI",sans-serif;letter-spacing:3px;opacity:.8}
+.ult-choice-buttons{display:flex;gap:10px}
+.ult-choice button{min-width:150px;min-height:48px;padding:8px 12px;border:1px solid rgba(224,193,255,.4);border-radius:9px;background:linear-gradient(135deg,#6d3aa5,#39215e);color:#fff;font:900 12px "Rajdhani","Segoe UI",sans-serif;letter-spacing:2px;touch-action:manipulation}
+.ult-choice button:active{transform:scale(.97);border-color:#e0b9ff}
+@media(max-width:600px){.ult-choice{top:50%;width:min(88vw,360px);padding:12px}.ult-choice-buttons{width:100%}.ult-choice button{flex:1;min-width:0;font-size:10px}}
+@media(orientation:landscape){.select-screen{padding:6px 3vw 12px}.select-top{padding-top:5px}.selection-grid{max-width:780px;gap:8px}.character-card{min-height:120px}.character-art{height:72px}.character-art img{max-height:68px}.select-confirm{min-height:44px}.opponent-grid{max-width:560px;gap:10px}.opponent-grid .character-card{min-height:150px}.opponent-grid .character-art{height:98px}.opponent-grid .character-art img{max-height:94px}}
