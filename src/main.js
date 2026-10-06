@@ -236,7 +236,7 @@ function update(dt){
   p.y+=(p.vy||p.dy||0)*dt;
   p.life-=dt;
 
-  if(p.type==="arrow"&&Math.abs(p.x-player.x)<.78&&p.y>=player.y+.08&&p.y<=player.y+1.30){
+  if(p.type==="arrow"&&Math.abs(p.x-player.x)<.78&&p.y>=player.y-.15&&p.y<=player.y+2.35){
     enemy.arrowHits++;
     const knockUp=enemy.arrowHits%2===0;
     // O impacto sempre empurra o Jugo PARA LONGE da flecha, nunca em direção ao arqueiro.
