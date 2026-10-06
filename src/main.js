@@ -200,14 +200,16 @@ function update(dt){
    enemy.atk=.48;
    enemy.anim=.45;
    const pattern=enemy.arrowHits%3;
-   const arrowY=pattern===0?1.05:pattern===1?1.45:2.0;
+   // A terceira flecha sobe em uma diagonal crescente controlada, mantendo-se na faixa alcançável pelo pulo.
+   const arrowY=pattern===0?.72:pattern===1?1.12:.92;
    const speed=12.5;
+   const vy=pattern===2?1.8:0;
    projectiles.push({
      type:"arrow",
      x:enemy.x+enemy.facing*1.15,
      y:arrowY,
      vx:enemy.facing*speed,
-     vy:0,
+     vy:vy,
      life:1.8,
      owner:"enemy"
    });
