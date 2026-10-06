@@ -202,7 +202,7 @@ function fireArcherFollowup(){
     enemy.ultFollowCount++;
     enemy.ultFollowTimer=.34;
   }else if(enemy.ultFollowup==="B"&&enemy.ultFollowCount===0){
-    projectiles.push({type:"arrow",ultB:true,x:enemy.x+enemy.facing*1.2,y:1.35,vx:enemy.facing*10.5,vy:0,life:4.5,owner:"enemy",split:false});
+    projectiles.push({type:"arrow",ultB:true,x:enemy.x+enemy.facing*1.2,y:1.35,vx:enemy.facing*10.5,vy:0,life:4.5,owner:"enemy",phase:"travel",split:false,explodeIn:0});
     enemy.ultFollowCount=1;
     enemy.ultBActive=true;
     enemy.ultFollowTimer=.2;
@@ -338,7 +338,7 @@ function update(dt){
   const p=projectiles[i];
   p.x+=p.vx*dt;
   p.y+=(p.vy||p.dy||0)*dt;
-  p.life-=dt;
+  if(!(p.type==="arrow"&&p.ultB&&p.phase==="split"))p.life-=dt;
 
   if(p.type==="arrow"&&!p.ultB&&Math.abs(p.x-player.x)<.78&&p.y>=player.y-.15&&p.y<=player.y+2.35){
     enemy.arrowHits++;
@@ -373,28 +373,42 @@ function update(dt){
     p.life=0;
   }
 
-  if(p.type==="arrow"&&p.ultB&&!p.split&&Math.abs(p.x-player.x)<=3.4){
-    p.split=true;p.x=player.x;p.vx=0;p.life=.5;p.y=player.y+1;
-    enemy.ultBActive=true;
+  if(p.type==="arrow"&&p.ultB&&p.phase==="travel"&&!p.split&&Math.abs(p.x-player.x)<=2.2){
+    // A flecha normal chega perto do Jugo e se divide imediatamente.
+    p.split=true;
+    p.phase="split";
+    p.x=player.x;
+    p.vx=0;
+    p.life=.5;
+    p.explodeIn=.5;
+    p.y=player.y+1;
     effects.push({type:"yellowSplit",x:player.x,y:player.y+1,life:.28,max:.28});
     projectiles.push(
-      {type:"pierceArrow",x:player.x-.10,y:player.y+.42,vx:0,vy:0,life:.5,owner:"enemy",hitDone:false,offsetX:-.10,offsetY:.42},
-      {type:"pierceArrow",x:player.x+.10,y:player.y+1.58,vx:0,vy:0,life:.5,owner:"enemy",hitDone:false,offsetX:.10,offsetY:1.58}
+      {type:"pierceArrow",x:player.x-.14,y:player.y+.42,vx:0,vy:0,life:.5,owner:"enemy",hitDone:false,offsetX:-.14,offsetY:.42},
+      {type:"pierceArrow",x:player.x+.14,y:player.y+1.58,vx:0,vy:0,life:.5,owner:"enemy",hitDone:false,offsetX:.14,offsetY:1.58}
     );
   }
   if(p.type==="pierceArrow"){
+    // As duas partes ficam grudadas no Jugo durante os 0,5 s.
     p.x=player.x+p.offsetX;
     p.y=player.y+p.offsetY;
-    if(!p.hitDone){damagePlayer(player.ult>0?18:34,0);p.hitDone=true;}
+    if(!p.hitDone){
+      damagePlayer(player.ult>0?18:34,0);
+      p.hitDone=true;
+    }
+    p.life=Math.max(0,p.life-dt);
   }
-  if(p.type==="arrow"&&p.ultB&&p.split&&p.life<=0){
-    damagePlayer(player.ult>0?42:72,0);
-    for(const q of projectiles)if(q.type==="pierceArrow")q.life=0;
-    effects.push({type:"yellowExplosion",x:player.x,y:player.y+1,life:.55,max:.55});
-    p.life=0;
-    enemy.ultBActive=false;
+  if(p.type==="arrow"&&p.ultB&&p.phase==="split"){
+    p.explodeIn=Math.max(0,p.explodeIn-dt);
+    p.life=p.explodeIn;
+    if(p.explodeIn<=0){
+      damagePlayer(player.ult>0?42:72,0);
+      for(const q of projectiles)if(q.type==="pierceArrow")q.life=0;
+      effects.push({type:"yellowExplosion",x:player.x,y:player.y+1,life:.55,max:.55});
+      p.life=0;
+      enemy.ultBActive=false;
+    }
   }
-  if(p.type==="pierceArrow"&&p.life>0)p.life-=dt;
 
   if(p.type==="orb"&&Math.abs(p.x-enemy.x)<1.0&&p.y>=enemy.y-.45&&p.y<=enemy.y+3.0){damageEnemy(player.ult>0?45:18,player.facing*1.5);p.life=0;effects.push({type:"hit",x:p.x,y:p.y,life:.2,max:.2});}
   if(p.type==="creature"&&Math.abs(p.x-enemy.x)<1.15&&p.y>=enemy.y-.45&&p.y<=enemy.y+3.1){damageEnemy(player.ult>0?95:50,player.facing*4);p.life=0;effects.push({type:"hit",x:p.x,y:1,life:.3,max:.3});}
