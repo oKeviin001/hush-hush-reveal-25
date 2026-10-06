@@ -138,30 +138,36 @@ function update(dt){
 
  const distance=Math.abs(dx);
 
- // O arqueiro é um zoner puro: NÃO existe "distância ideal".
- // A regra é simples: quanto mais longe do Jugo, melhor.
+ // DUAS LINHAS INVISÍVEIS DE DEFESA DO ARQUEIRO.
+ // Linha 1: se Jugo entra aqui, o arqueiro tenta disparar a ultimate.
+ // Linha 2: se Jugo passa ainda mais perto, o arqueiro fica invisível e foge.
+ const ULT_LINE=11.5;
+ const STEALTH_LINE=6.5;
+
+ // O arqueiro sempre procura o ponto MAIS DISTANTE do Jugo.
+ // Não existe "voltar para onde estava": a referência é sempre a posição atual do Jugo.
+ const leftDistance=Math.abs(player.x-(-9.2));
+ const rightDistance=Math.abs(player.x-9.2);
+ const farthestCorner=leftDistance>rightDistance?-9.2:9.2;
+
  if(enemy.stealth>0){
-   const escapeTarget=enemy.x>=0?-8.8:8.8;
-   enemy.vx=clamp((escapeTarget-enemy.x)*3.8,-7.2,7.2);
+   // Invisível: corrida contínua até o canto mais distante do Jugo.
+   enemy.vx=clamp((farthestCorner-enemy.x)*4.5,-8.5,8.5);
    enemy.x=clamp(enemy.x+enemy.vx*dt,-9.2,9.2);
    enemy.anim+=dt*(Math.abs(enemy.vx)*1.8+2);
  }else{
-   // Se houver espaço no lado oposto, ele vai para lá.
-   // Ele nunca se aproxima voluntariamente do Jugo para "entrar no alcance".
-   const oppositeSide=player.x>=0?-8.8:8.8;
-   const desiredX=oppositeSide;
-
-   if(Math.abs(enemy.x-desiredX)>.35){
-     enemy.vx=clamp((desiredX-enemy.x)*2.4,-5.8,5.8);
+   // Mesmo sem estar invisível, ele se posiciona no extremo mais distante possível.
+   if(Math.abs(enemy.x-farthestCorner)>.18){
+     enemy.vx=clamp((farthestCorner-enemy.x)*3.2,-7.0,7.0);
    }else{
      enemy.vx=0;
    }
 
-   // Se o Jugo encurralar o arqueiro, invisibilidade + fuga para o canto oposto.
-   if(distance<4.5&&enemy.stealthCd<=0){
-     enemy.stealth=2.0;
+   // Linha 2: Jugo chegou perto demais -> invisibilidade + fuga imediata.
+   if(distance<=STEALTH_LINE&&enemy.stealthCd<=0){
+     enemy.stealth=2.2;
      enemy.stealthCd=8.0;
-     enemy.vx=enemy.x>=0?-7.2:7.2;
+     enemy.vx=enemy.x<player.x?-8.5:8.5;
      effects.push({type:"stealth",x:enemy.x,y:1.4,life:.55,max:.55,enemy:true});
    }
 
@@ -169,9 +175,9 @@ function update(dt){
    enemy.anim+=dt*(Math.abs(enemy.vx)*1.8+2);
  }
 
- // Ultimate: uma flecha gigante, reta, que atordoa por 2,8 segundos.
- // Ela só é usada com espaço suficiente para o arqueiro preparar o disparo.
- if(enemy.stealth<=0&&distance>4.5&&distance<=18&&enemy.ultCd<=0){
+ // Linha 1: ultimate. O arqueiro só prepara esse disparo quando o Jugo
+ // cruza a faixa de segurança, mas ainda não chegou na zona de invisibilidade.
+ if(enemy.stealth<=0&&distance<=ULT_LINE&&distance>STEALTH_LINE&&enemy.ultCd<=0){
    enemy.ultCd=20;
    enemy.atk=.8;
    enemy.anim=.65;
@@ -179,7 +185,7 @@ function update(dt){
    const speed=14.5;
    projectiles.push({type:"ultArrow",x:enemy.x+enemy.facing*1.4,y:arrowY,vx:enemy.facing*speed,vy:0,life:2.0,owner:"enemy"});
    effects.push({type:"ultShot",x:enemy.x+enemy.facing*1.0,y:1.25,life:.45,max:.45,enemy:true});
- }else if(enemy.stealth<=0&&distance>4.5&&distance<=18&&enemy.shoot<=0){
+ }else if(enemy.stealth<=0&&distance>STEALTH_LINE&&enemy.shoot<=0){
    enemy.shoot=1.35;
    enemy.atk=.48;
    enemy.anim=.45;
@@ -197,7 +203,6 @@ function update(dt){
    });
    effects.push({type:"bowshot",x:enemy.x+enemy.facing*.9,y:arrowY,life:.16,max:.16,flip:enemy.facing,enemy:true});
  }
-
 
  // O arqueiro não procura corpo a corpo. Se for alcançado, sua resposta é fugir/invisibilidade.
 
