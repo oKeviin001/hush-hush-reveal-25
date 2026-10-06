@@ -170,8 +170,8 @@ function draw(){
  for(const f of [player,enemy]){const x=W/2+f.x*W*.035;ctx.fillStyle="rgba(0,0,0,.42)";ctx.beginPath();ctx.ellipse(x,floorY+3,45,10,0,0,TAU);ctx.fill();}
  // projectiles behind fighters
  for(const p of projectiles){const x=W/2+p.x*W*.035,y=floorY-p.y*H*.075; if(p.type==="creature")sprite(IMG.creature,x,y-10,72,player.facing);else{ctx.fillStyle="rgba(90,190,255,.25)";ctx.beginPath();ctx.arc(x,y-20,22,0,TAU);ctx.fill();ctx.fillStyle="#75d8ff";ctx.beginPath();ctx.arc(x,y-20,8,0,TAU);ctx.fill();}}
- if(player.x<enemy.x){fighterDraw(player,player.ult>0?IMG.ult:IMG.jugo,player.ult>0?3.2:2.8,1);fighterDraw(enemy,IMG.enemy,2.65,-1);}
- else{fighterDraw(enemy,IMG.enemy,2.65,1);fighterDraw(player,player.ult>0?IMG.ult:IMG.jugo,player.ult>0?3.2:2.8,-1);}
+ if(player.x<enemy.x){fighterDraw(player,player.ult>0?IMG.ult:IMG.jugo,player.ult>0?330:285,1);fighterDraw(enemy,IMG.enemy,270,-1);}
+ else{fighterDraw(enemy,IMG.enemy,270,1);fighterDraw(player,player.ult>0?IMG.ult:IMG.jugo,player.ult>0?330:285,-1);}
  for(const e of effects){const x=W/2+e.x*W*.035,y=floorY-e.y*H*.075;const k=e.life/e.max;if(e.type==="slash"){ctx.save();ctx.translate(x,y);ctx.scale(e.flip,1);ctx.globalCompositeOperation="lighter";ctx.strokeStyle=e.enemy?"rgba(255,100,90,.9)":"rgba(130,220,255,.95)";ctx.lineWidth=8*k;ctx.beginPath();ctx.arc(0,0,65*(1-k)+35,-1.1,1.0);ctx.stroke();ctx.restore();}else if(e.type==="hit"){ctx.fillStyle=`rgba(255,230,170,${k})`;ctx.beginPath();ctx.arc(x,y,45*(1-k)+8,0,TAU);ctx.fill();}else{ctx.fillStyle=`rgba(255,210,130,${k*.5})`;ctx.beginPath();ctx.arc(x,y,120*(1-k)+10,0,TAU);ctx.fill();}}
  // center line
  ctx.strokeStyle="rgba(255,220,150,.25)";ctx.setLineDash([8,10]);ctx.beginPath();ctx.moveTo(W/2,floorY-15);ctx.lineTo(W/2,floorY+10);ctx.stroke();ctx.setLineDash([]);
