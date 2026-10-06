@@ -98,7 +98,7 @@ joystick.addEventListener("pointerup",resetJoy);joystick.addEventListener("point
 addEventListener("keydown",e=>{const k=e.key.toLowerCase();input.keys.add(k);if(e.repeat)return;if(k==="j"||k==="1")cast("A");if(k==="k"||k==="2")cast("B");if(k==="l"||k==="3")cast("C");if(k===" "||k==="enter")basicAttack();if(k==="r"&&ended)reset();});
 addEventListener("keyup",e=>input.keys.delete(e.key.toLowerCase()));
 
-function isNear(){return Math.abs(player.x-enemy.x)<2.15&&Math.abs(player.y-enemy.y)<1.5;}
+function isNear(){return Math.abs(player.x-enemy.x)<2.15&&Math.abs(player.y-enemy.y)<2.4;}
 function faceOpponent(){player.facing=enemy.x>=player.x?1:-1;}
 function damageEnemy(amount,knock=0){if(!enemy.alive)return;enemy.hp=Math.max(0,enemy.hp-amount);enemy.hit=.16;enemy.vx=knock;if(enemy.hp<=0){enemy.alive=false;finish(true);}}
 function damagePlayer(amount,knock=0){if(!player.alive||player.inv>0)return;player.hp=Math.max(0,player.hp-amount);player.hit=.18;player.vx=knock;if(player.hp<=0){player.alive=false;finish(false);}}
@@ -222,7 +222,7 @@ function update(dt){
   p.y+=(p.vy||p.dy||0)*dt;
   p.life-=dt;
 
-  if(p.type==="arrow"&&Math.abs(p.x-player.x)<.85&&Math.abs(p.y-(player.y+1))<.85){
+  if(p.type==="arrow"&&Math.abs(p.x-player.x)<.85&&p.y>=player.y-.35&&p.y<=player.y+3.0){
     enemy.arrowHits++;
     const knockUp=enemy.arrowHits%2===0;
     // O impacto sempre empurra o Jugo PARA LONGE da flecha, nunca em direção ao arqueiro.
@@ -237,7 +237,7 @@ function update(dt){
     p.life=0;
   }
 
-  if(p.type==="ultArrow"&&Math.abs(p.x-player.x)<1.35&&Math.abs(p.y-(player.y+1))<1.15){
+  if(p.type==="ultArrow"&&Math.abs(p.x-player.x)<1.35&&p.y>=player.y-.45&&p.y<=player.y+3.25){
     damagePlayer(player.ult>0?30:55,Math.sign(p.vx)*7);
     if(player.alive){
       player.stun=2.8;
@@ -248,8 +248,8 @@ function update(dt){
     p.life=0;
   }
 
-  if(p.type==="orb"&&Math.abs(p.x-enemy.x)<1.0&&Math.abs(p.y-1)<1.35){damageEnemy(player.ult>0?45:18,player.facing*1.5);p.life=0;effects.push({type:"hit",x:p.x,y:p.y,life:.2,max:.2});}
-  if(p.type==="creature"&&Math.abs(p.x-enemy.x)<1.15&&Math.abs(p.y-enemy.y)<1.4){damageEnemy(player.ult>0?95:50,player.facing*4);p.life=0;effects.push({type:"hit",x:p.x,y:1,life:.3,max:.3});}
+  if(p.type==="orb"&&Math.abs(p.x-enemy.x)<1.0&&p.y>=enemy.y-.45&&p.y<=enemy.y+3.0){damageEnemy(player.ult>0?45:18,player.facing*1.5);p.life=0;effects.push({type:"hit",x:p.x,y:p.y,life:.2,max:.2});}
+  if(p.type==="creature"&&Math.abs(p.x-enemy.x)<1.15&&p.y>=enemy.y-.45&&p.y<=enemy.y+3.1){damageEnemy(player.ult>0?95:50,player.facing*4);p.life=0;effects.push({type:"hit",x:p.x,y:1,life:.3,max:.3});}
   if(p.life<=0||Math.abs(p.x)>12||p.y<-1||p.y>4)projectiles.splice(i,1);
  }
  for(let i=effects.length-1;i>=0;i--){effects[i].life-=dt;if(effects[i].life<=0)effects.splice(i,1);}
@@ -275,7 +275,7 @@ function fighterDraw(f,img,h,flip){
  const ground=H*.78;
   // Na horizontal, a altura da tela controla o tamanho do lutador.
   const landscape=W>=H;
-  const scale=landscape?clamp(H/600,.62,.84):Math.min(W/520,.82);
+  const scale=landscape?clamp(H/600,.38,.52):Math.min(W/520,.68);
   const x=worldX(f.x),y=ground-f.y*H*.075;
  const moving=Math.abs(f.vx)>.1, bob=moving?Math.abs(Math.sin(f.anim*5))*.025:Math.sin(time*2.5)*.012;
  const alpha=f===enemy&&enemy.stealth>0?.10:1;
