@@ -270,12 +270,15 @@ function sprite(img,x,y,h,flip=1,alpha=1,filter="none"){
  if(!img.complete||!img.naturalWidth)return;
  const w=h*img.naturalWidth/img.naturalHeight;ctx.save();ctx.translate(x,y);ctx.scale(flip,1);ctx.globalAlpha=alpha;ctx.filter=filter;ctx.drawImage(img,-w/2,-h,w,h);ctx.restore();
 }
-const worldX=x=>W/2+x*W*(W>=H?.035:.065);
+// Câmera mais afastada na horizontal: mais espaço visual entre os lutadores
+// e mais tempo/espaço para as flechas atravessarem a arena.
+const worldX=x=>W/2+x*W*(W>=H?.028:.065);
 function fighterDraw(f,img,h,flip){
  const ground=H*.78;
-  // Na horizontal, a altura da tela controla o tamanho do lutador.
+  // Zoom-out de verdade: reduz o lutador junto com a escala da arena.
+  // Assim a flecha ganha uma faixa maior de espaço para acertar ou passar.
   const landscape=W>=H;
-  const scale=landscape?clamp(H/600,.38,.52):Math.min(W/520,.68);
+  const scale=landscape?clamp(H/700,.26,.34):Math.min(W/520,.68);
   const x=worldX(f.x),y=ground-f.y*H*.075;
  const moving=Math.abs(f.vx)>.1, bob=moving?Math.abs(Math.sin(f.anim*5))*.025:Math.sin(time*2.5)*.012;
  const alpha=f===enemy&&enemy.stealth>0?.10:1;
