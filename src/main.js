@@ -85,9 +85,18 @@ const introScreen=document.querySelector("#introScreen"),mainMenu=document.query
 let screen="intro";
 function showScreen(next){screen=next;[introScreen,mainMenu,characterSelect,opponentSelect,gameLayer].forEach(el=>el.classList.add("hidden"));const target={intro:introScreen,menu:mainMenu,characters:characterSelect,opponents:opponentSelect,game:gameLayer}[next];if(target)target.classList.remove("hidden");}
 setTimeout(()=>showScreen("menu"),1900);
-testButton.addEventListener("click",()=>showScreen("characters"));
-characterConfirm.addEventListener("click",()=>showScreen("opponents"));
-opponentConfirm.addEventListener("click",()=>{showScreen("game");reset();});
+
+function menuAction(button,action){
+  if(!button)return;
+  button.addEventListener("pointerup",(event)=>{
+    event.preventDefault();
+    event.stopPropagation();
+    action();
+  });
+}
+menuAction(testButton,()=>showScreen("characters"));
+menuAction(characterConfirm,()=>showScreen("opponents"));
+menuAction(opponentConfirm,()=>{showScreen("game");reset();});
 const canvas=document.querySelector("#game"),ctx=canvas.getContext("2d");
 const joystick=document.querySelector("#joystick"),knob=document.querySelector("#joystickKnob");
 const basic=document.querySelector("#basicAttack"),overlay=document.querySelector("#overlay");
