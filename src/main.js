@@ -139,7 +139,7 @@ const input={x:0,y:0,keys:new Set()};
 
 function reset(){
   player={x:-5,y:0,vx:0,vy:0,facing:1,hp:MAX_HP,atk:0,hit:0,anim:0,ult:0,inv:0,stun:0,alive:true};
-  enemy={x:5,y:0,vx:0,vy:0,facing:-1,hp:ENEMY_MAX_HP,atk:0,hit:0,anim:0,ai:0,shoot:0,arrowHits:0,stealth:0,stealthCd:0,ultCd:7,alive:true,ultChoiceOpen:false,ultChoiceDone:false,ultFollowup:"",ultFollowCount:0,ultFollowTimer:0};
+  enemy={x:5,y:0,vx:0,vy:0,facing:-1,hp:ENEMY_MAX_HP,atk:0,hit:0,anim:0,ai:0,shoot:0,arrowHits:0,stealth:0,stealthCd:0,ultCd:7,alive:true,ultChoiceOpen:false,ultChoicePending:false,ultChoiceDone:false,ultChoiceTimer:0,ultFollowup:"",ultFollowCount:0,ultFollowTimer:0};
   projectiles=[];effects=[];cds={A:0,B:0,C:0};ended=false;cameraX=0;
   overlay.classList.add("hidden");roundText.textContent="ROUND "+round;fightMessage.textContent="JUGO";fightMessage.classList.remove("show");
   input.x=0;input.y=0;knob.style.transform="translate(-50%,-50%)";
@@ -184,7 +184,9 @@ function finish(win){if(ended)return;ended=true;fightMessage.textContent=win?"K.
 
 function openArcherUltimateChoice(){
   enemy.ultChoiceOpen=true;
+  enemy.ultChoicePending=false;
   enemy.ultChoiceDone=false;
+  enemy.ultChoiceTimer=2.2;
   enemy.ultFollowup="";
   enemy.ultFollowCount=0;
   enemy.ultFollowTimer=0;
@@ -192,6 +194,7 @@ function openArcherUltimateChoice(){
 function chooseArcherUltimate(choice){
   if(!enemy.ultChoiceOpen||enemy.ultChoiceDone)return;
   enemy.ultChoiceDone=true;
+  enemy.ultChoiceTimer=0;
   enemy.ultChoiceOpen=false;
   enemy.ultFollowup=choice;
   enemy.ultFollowCount=0;
@@ -219,7 +222,7 @@ function update(dt){
  player.vx=player.stun>0?player.vx:move*6.2;
  if(player.stun<=0&&(input.y<-.45||up)&&Math.abs(player.y)<.02){player.vy=9.5;}
  player.vy-=22*dt;player.y=Math.max(0,player.y+player.vy*dt);
- if(enemy.ultChoiceOpen&&player.y<=.001&&player.stun>0)player.stun=2.8;
+ if(enemy.ultChoicePending&&player.y<=.001&&player.vy<=0)openArcherUltimateChoice();
  player.x=clamp(player.x+player.vx*dt,-17,17);
  if(Math.abs(player.vx)>.1&&player.stun<=0)player.facing=player.vx>0?1:-1;
  player.anim+=dt*(Math.abs(player.vx)*1.8+2);
@@ -280,9 +283,22 @@ function update(dt){
  const targetCamera=clamp((player.x+enemy.x)*.5,-cameraLimit,cameraLimit);
  cameraX+= (targetCamera-cameraX)*Math.min(1,dt*7.5);
 
- // Linha 1: ultimate. O arqueiro só prepara esse disparo quando o Jugo
- // cruza a faixa de segurança, mas ainda não chegou na zona de invisibilidade.
- if(enemy.stealth<=0&&distance<=ULT_LINE&&distance>STEALTH_LINE&&enemy.ultCd<=0){
+ // Durante a escolha e durante A/B, o arqueiro fica dedicado à ultimate.
+ if(enemy.ultChoiceOpen){
+   enemy.vx=0;
+   enemy.shoot=0;
+   enemy.atk=0;
+   enemy.ultChoiceTimer=Math.max(0,enemy.ultChoiceTimer-dt);
+   if(enemy.ultChoiceTimer<=0)chooseArcherUltimate("A");
+ }else if(enemy.ultChoicePending){
+   enemy.vx=0;
+   enemy.shoot=0;
+   enemy.atk=0;
+ }else if(enemy.ultFollowup){
+   enemy.vx=0;
+   enemy.shoot=0;
+   enemy.atk=0;
+ }else if(enemy.stealth<=0&&distance<=ULT_LINE&&distance>STEALTH_LINE&&enemy.ultCd<=0){
    enemy.ultCd=20;
    enemy.atk=.8;
    enemy.anim=.65;
@@ -349,7 +365,7 @@ function update(dt){
       player.stun=2.8;
       player.vx=Math.sign(p.vx)*7;
       player.vy=7.5;
-      openArcherUltimateChoice();
+      enemy.ultChoicePending=true;
       effects.push({type:"stun",x:player.x,y:player.y+1.2,life:2.8,max:2.8});
     }
     p.life=0;
