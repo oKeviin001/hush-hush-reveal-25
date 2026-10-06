@@ -382,8 +382,10 @@ function update(dt){
       {type:"pierceArrow",x:player.x+.10,y:player.y+1.58,vx:0,vy:0,life:.5,owner:"enemy",hitDone:false}
     );
   }
-  if(p.type==="pierceArrow"&&!p.hitDone){
-    damagePlayer(player.ult>0?18:34,0);p.hitDone=true;
+  if(p.type==="pierceArrow"){
+    p.x=player.x+(p.y<player.y+1?.10:-.10);
+    p.y=player.y+(p.y<player.y+1?.42:1.58);
+    if(!p.hitDone){damagePlayer(player.ult>0?18:34,0);p.hitDone=true;}
   }
   if(p.type==="arrow"&&p.ultB&&p.split&&p.life<=0){
     damagePlayer(player.ult>0?42:72,0);
@@ -397,6 +399,9 @@ function update(dt){
   if(p.type==="orb"&&Math.abs(p.x-enemy.x)<1.0&&p.y>=enemy.y-.45&&p.y<=enemy.y+3.0){damageEnemy(player.ult>0?45:18,player.facing*1.5);p.life=0;effects.push({type:"hit",x:p.x,y:p.y,life:.2,max:.2});}
   if(p.type==="creature"&&Math.abs(p.x-enemy.x)<1.15&&p.y>=enemy.y-.45&&p.y<=enemy.y+3.1){damageEnemy(player.ult>0?95:50,player.facing*4);p.life=0;effects.push({type:"hit",x:p.x,y:1,life:.3,max:.3});}
   const visibleHalf=1/(2*(W>=H?.04:.065));
+  if(p.ultB&&p.life<=0&&!p.split){
+    enemy.ultBActive=false;
+  }
   if(p.life<=0||(!p.ultB&&Math.abs(p.x-cameraX)>visibleHalf+1.2)||p.y<-1||p.y>4)projectiles.splice(i,1);
  }
  for(let i=effects.length-1;i>=0;i--){effects[i].life-=dt;if(effects[i].life<=0)effects.splice(i,1);}
