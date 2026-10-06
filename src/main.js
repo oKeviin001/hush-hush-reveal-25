@@ -32,14 +32,14 @@ app.innerHTML = `
         <div class="joystick-knob" id="joystickKnob"></div>
       </div>
       <div class="skill-row">
-        <button class="skill skill-a" data-skill="A" aria-label="Habilidade A — Criatura"><span class="key">A</span><span class="lbl">CRIATURA</span><span class="cd"></span><span class="cdt"></span></button>
-        <button class="skill skill-b" data-skill="B" aria-label="Habilidade B — Esferas"><span class="key">B</span><span class="lbl">ESFERAS</span><span class="cd"></span><span class="cdt"></span></button>
+        <button class="skill skill-a" data-skill="A" aria-label="Habilidade A — Criatura"><span class="key">A</span><span class="lbl">CRIATURA</span><span class="cd"></span><span class="cdt"></span><span class="aim-stick" aria-hidden="true"><span class="aim-knob"></span></span></button>
+        <button class="skill skill-b" data-skill="B" aria-label="Habilidade B — Esferas"><span class="key">B</span><span class="lbl">ESFERAS</span><span class="cd"></span><span class="cdt"></span><span class="aim-stick" aria-hidden="true"><span class="aim-knob"></span></span></button>
         <button class="skill skill-c" data-skill="C" aria-label="Ultimate"><span class="key">C</span><span class="lbl">ULTIMATE</span><span class="cd"></span><span class="cdt"></span></button>
       </div>
     </div>
 
     <div class="overlay hidden" id="overlay"><h1>JUGO CAIU</h1><p>TOQUE PARA VOLTAR</p></div>
-    <div class="hint">JOYSTICK / WASD mover • A B: toque, arraste a mira, toque de novo • C ultimate</div>
+    <div class="hint">JOYSTICK / WASD mover • A/B: segure e arraste para mirar • solte para lançar • C ultimate</div>
   </main>
 `;
 
@@ -154,22 +154,116 @@ addEventListener("keydown", e => {
 });
 addEventListener("keyup", e => input.keys.delete(e.key.toLowerCase()));
 
+let skillAimPtr = null;
+let skillAimKey = null;
+
+function updateSkillAim(k, clientX, clientY) {
+  const b = btn[k];
+  if (!b) return;
+  const r = b.getBoundingClientRect();
+  const cx = r.left + r.width / 2;
+  const cy = r.top + r.height / 2;
+  const max = Math.max(18, Math.min(34, r.width * 0.42));
+  let dx = clientX - cx;
+  let dy = clientY - cy;
+  const len = Math.hypot(dx, dy) || 1;
+  const l = Math.min(len, max);
+  dx = dx / len * l;
+  dy = dy / len * l;
+
+  const knobEl = b.querySelector(".aim-knob");
+  if (knobEl) knobEl.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+
+  if (len > 5) {
+    const R = { x: Math.cos(cam.yaw), z: -Math.sin(cam.yaw) };
+    const F = { x: Math.sin(cam.yaw), z: Math.cos(cam.yaw) };
+    const sx = dx / max;
+    const sy = dy / max;
+    const wx = R.x * sx - F.x * sy;
+    const wz = R.z * sx - F.z * sy;
+    const wl = Math.hypot(wx, wz) || 1;
+    const range = k === "A" ? rangeA() : 13;
+    aimPoint = {
+      x: player.x + wx / wl * range,
+      z: player.z + wz / wl * range
+    };
+    player.facing = Math.atan2(wx / wl, wz / wl);
+  }
+}
+
+function resetSkillAimVisual(k) {
+  const b = btn[k];
+  if (!b) return;
+  const knobEl = b.querySelector(".aim-knob");
+  if (knobEl) knobEl.style.transform = "translate(-50%, -50%)";
+  b.classList.remove("pressed");
+}
+
+function beginSkillAim(k, e) {
+  if (!player.alive) return;
+  if (cds[k] > 0) { deny(k); return; }
+  if (k === "B" && player.ult > 0) {
+    castSpin();
+    return;
+  }
+
+  skillAimPtr = e.pointerId;
+  skillAimKey = k;
+  btn[k].setPointerCapture?.(e.pointerId);
+  btn[k].classList.add("pressed");
+  aiming = k;
+
+  const f = facingVec();
+  const range = k === "A" ? rangeA() : 13;
+  aimPoint = { x: player.x + f.x * range, z: player.z + f.z * range };
+  updateSkillAim(k, e.clientX, e.clientY);
+}
+
+function finishSkillAim(e, cancelled = false) {
+  if (skillAimPtr !== e.pointerId) return;
+  const k = skillAimKey;
+  skillAimPtr = null;
+  skillAimKey = null;
+  if (k) {
+    if (!cancelled && player.alive) cast(k);
+    resetSkillAimVisual(k);
+  }
+  aiming = null;
+}
+
 Object.entries(btn).forEach(([k, b]) => {
-  b.addEventListener("pointerdown", e => { e.preventDefault(); b.classList.add("pressed"); pressSkill(k); });
-  b.addEventListener("pointerup", () => b.classList.remove("pressed"));
-  b.addEventListener("pointercancel", () => b.classList.remove("pressed"));
-  b.addEventListener("pointerleave", () => b.classList.remove("pressed"));
+  b.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    if (k === "C") {
+      b.classList.add("pressed");
+      pressSkill(k);
+      return;
+    }
+    beginSkillAim(k, e);
+  });
+  b.addEventListener("pointermove", e => {
+    if (skillAimPtr === e.pointerId && skillAimKey === k) {
+      e.preventDefault();
+      updateSkillAim(k, e.clientX, e.clientY);
+    }
+  });
+  b.addEventListener("pointerup", e => {
+    if (k === "C") { b.classList.remove("pressed"); return; }
+    finishSkillAim(e);
+  });
+  b.addEventListener("pointercancel", e => {
+    if (k === "C") { b.classList.remove("pressed"); return; }
+    finishSkillAim(e, true);
+  });
+  b.addEventListener("lostpointercapture", e => {
+    if (k !== "C" && skillAimPtr === e.pointerId) finishSkillAim(e, true);
+  });
 });
 
-let aimPtr = null;
 canvas.addEventListener("pointerdown", e => {
   if (!player.alive) { reset(); return; }
-  if (aiming) { aimPtr = e.pointerId; aimPoint = unproject(e.clientX, e.clientY); }
 });
-canvas.addEventListener("pointermove", e => {
-  if (aiming && (e.pointerId === aimPtr || e.pointerType === "mouse")) aimPoint = unproject(e.clientX, e.clientY);
-});
-canvas.addEventListener("pointerup", e => { if (e.pointerId === aimPtr) aimPtr = null; });
+
 $overlay.addEventListener("pointerdown", () => reset());
 
 function deny(k) { btn[k].classList.remove("denied"); void btn[k].offsetWidth; btn[k].classList.add("denied"); }
@@ -179,8 +273,10 @@ function pressSkill(k) {
   if (k === "C") { castUlt(); return; }
   if (cds[k] > 0) { deny(k); return; }
   if (k === "B" && player.ult > 0) { castSpin(); aiming = null; return; }
-  if (aiming === k) { cast(k); aiming = null; return; }
-  aiming = k; aimPoint = null;
+  aiming = k;
+  const f = facingVec();
+  const range = k === "A" ? rangeA() : 13;
+  aimPoint = { x: player.x + f.x * range, z: player.z + f.z * range };
 }
 
 /* ---------------- camera / projection ---------------- */
@@ -1181,7 +1277,7 @@ function updateHud() {
   btn.B.querySelector(".lbl").textContent = u ? "GIRO" : "ESFERAS";
   btn.A.querySelector(".lbl").textContent = u ? "CRIATURA+" : "CRIATURA";
   $aimHint.classList.toggle("on", !!aiming);
-  if (aiming) $aimHint.textContent = `${aiming === "A" ? "CRIATURA" : "ESFERAS"} • ARRASTE NA TELA PARA MIRAR • TOQUE ${aiming} DE NOVO`;
+  if (aiming) $aimHint.textContent = `${aiming === "A" ? "CRIATURA" : "ESFERAS"} • SEGURE E ARRASTE NO BOTÃO • SOLTE PARA LANÇAR`;
 }
 
 let last = performance.now();
