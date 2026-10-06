@@ -378,13 +378,13 @@ function update(dt){
     enemy.ultBActive=true;
     effects.push({type:"yellowSplit",x:player.x,y:player.y+1,life:.28,max:.28});
     projectiles.push(
-      {type:"pierceArrow",x:player.x-.10,y:player.y+.42,vx:0,vy:0,life:.5,owner:"enemy",hitDone:false},
-      {type:"pierceArrow",x:player.x+.10,y:player.y+1.58,vx:0,vy:0,life:.5,owner:"enemy",hitDone:false}
+      {type:"pierceArrow",x:player.x-.10,y:player.y+.42,vx:0,vy:0,life:.5,owner:"enemy",hitDone:false,offsetX:-.10,offsetY:.42},
+      {type:"pierceArrow",x:player.x+.10,y:player.y+1.58,vx:0,vy:0,life:.5,owner:"enemy",hitDone:false,offsetX:.10,offsetY:1.58}
     );
   }
   if(p.type==="pierceArrow"){
-    p.x=player.x+(p.y<player.y+1?.10:-.10);
-    p.y=player.y+(p.y<player.y+1?.42:1.58);
+    p.x=player.x+p.offsetX;
+    p.y=player.y+p.offsetY;
     if(!p.hitDone){damagePlayer(player.ult>0?18:34,0);p.hitDone=true;}
   }
   if(p.type==="arrow"&&p.ultB&&p.split&&p.life<=0){
