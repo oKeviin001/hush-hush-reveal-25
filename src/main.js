@@ -138,30 +138,30 @@ function update(dt){
 
  const distance=Math.abs(dx);
 
- // Enquanto estiver invisível, NÃO pensa em atacar nem em seguir o Jugo:
- // atravessa a arena até o canto oposto e só então volta ao comportamento normal.
+ // O arqueiro é um zoner puro: NÃO existe "distância ideal".
+ // A regra é simples: quanto mais longe do Jugo, melhor.
  if(enemy.stealth>0){
-   const escapeTarget=enemy.x>=0?-8.7:8.7;
-   enemy.vx=clamp((escapeTarget-enemy.x)*2.8,-6.4,6.4);
+   const escapeTarget=enemy.x>=0?-8.8:8.8;
+   enemy.vx=clamp((escapeTarget-enemy.x)*3.8,-7.2,7.2);
    enemy.x=clamp(enemy.x+enemy.vx*dt,-9.2,9.2);
    enemy.anim+=dt*(Math.abs(enemy.vx)*1.8+2);
  }else{
-   // Zoneamento puro: quanto mais perto Jugo chega, mais o arqueiro tenta abrir espaço.
-   const farDistance=8.0;
-   if(distance<farDistance){
-     enemy.vx=clamp(-dx*1.8,-5.2,5.2);
-   }else if(distance<9.8){
-     enemy.vx=0;
+   // Se houver espaço no lado oposto, ele vai para lá.
+   // Ele nunca se aproxima voluntariamente do Jugo para "entrar no alcance".
+   const oppositeSide=player.x>=0?-8.8:8.8;
+   const desiredX=oppositeSide;
+
+   if(Math.abs(enemy.x-desiredX)>.35){
+     enemy.vx=clamp((desiredX-enemy.x)*2.4,-5.8,5.8);
    }else{
-     // Só recupera distância de ataque quando Jugo estiver longe demais.
-     enemy.vx=clamp(dx*0.8,-3.0,3.0);
+     enemy.vx=0;
    }
 
-   // Se for encurralado, desaparece e escolhe deliberadamente o canto oposto.
-   if(distance<5.2&&enemy.stealthCd<=0){
+   // Se o Jugo encurralar o arqueiro, invisibilidade + fuga para o canto oposto.
+   if(distance<4.5&&enemy.stealthCd<=0){
      enemy.stealth=2.0;
      enemy.stealthCd=8.0;
-     enemy.vx=enemy.x>=0?-6.4:6.4;
+     enemy.vx=enemy.x>=0?-7.2:7.2;
      effects.push({type:"stealth",x:enemy.x,y:1.4,life:.55,max:.55,enemy:true});
    }
 
@@ -171,41 +171,35 @@ function update(dt){
 
  // Ultimate: uma flecha gigante, reta, que atordoa por 2,8 segundos.
  // Ela só é usada com espaço suficiente para o arqueiro preparar o disparo.
- if(enemy.stealth<=0&&distance>5.5&&distance<11&&enemy.ultCd<=0){
+ if(enemy.stealth<=0&&distance>4.5&&distance<=18&&enemy.ultCd<=0){
    enemy.ultCd=20;
    enemy.atk=.8;
    enemy.anim=.65;
    const arrowY=1.25;
-   const speed=12.5;
+   const speed=14.5;
    projectiles.push({type:"ultArrow",x:enemy.x+enemy.facing*1.4,y:arrowY,vx:enemy.facing*speed,vy:0,life:2.0,owner:"enemy"});
    effects.push({type:"ultShot",x:enemy.x+enemy.facing*1.0,y:1.25,life:.45,max:.45,enemy:true});
- }else if(enemy.stealth<=0&&distance>5.2&&distance<11&&enemy.shoot<=0){
+ }else if(enemy.stealth<=0&&distance>4.5&&distance<=18&&enemy.shoot<=0){
    enemy.shoot=1.35;
    enemy.atk=.48;
    enemy.anim=.45;
    const pattern=enemy.arrowHits%3;
-   const arrowY=pattern===0?1.05:pattern===1?1.45:1.05;
-   const angle=pattern===1?.22:pattern===2?-.22:0;
-   const speed=10.5;
+   const arrowY=pattern===0?1.05:pattern===1?1.45:2.0;
+   const speed=12.5;
    projectiles.push({
      type:"arrow",
      x:enemy.x+enemy.facing*1.15,
      y:arrowY,
-     vx:enemy.facing*speed*Math.cos(angle),
-     vy:speed*Math.sin(angle),
+     vx:enemy.facing*speed,
+     vy:0,
      life:1.8,
      owner:"enemy"
    });
    effects.push({type:"bowshot",x:enemy.x+enemy.facing*.9,y:arrowY,life:.16,max:.16,flip:enemy.facing,enemy:true});
  }
 
- // Corpo a corpo é último recurso e só acontece se ele for realmente encurralado.
- if(enemy.stealth<=0&&distance<1.9&&Math.abs(player.y-enemy.y)<1.2&&enemy.atk<=0){
-   enemy.atk=.85;
-   enemy.anim=.35;
-   damagePlayer(player.ult>0?28:45,Math.sign(dx)*3);
-   effects.push({type:"slash",x:enemy.x+enemy.facing*1.1,y:1.1,life:.18,max:.18,flip:enemy.facing,enemy:true});
- }
+
+ // O arqueiro não procura corpo a corpo. Se for alcançado, sua resposta é fugir/invisibilidade.
 
  for(let i=projectiles.length-1;i>=0;i--){
   const p=projectiles[i];
