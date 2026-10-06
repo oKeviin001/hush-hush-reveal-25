@@ -224,7 +224,7 @@ function update(dt){
   p.y+=(p.vy||p.dy||0)*dt;
   p.life-=dt;
 
-  if(p.type==="arrow"&&Math.abs(p.x-player.x)<.85&&p.y>=player.y-.35&&p.y<=player.y+3.0){
+  if(p.type==="arrow"&&player.y>.18&&Math.abs(p.x-player.x)<.85&&Math.abs(p.y-player.y)<.72){
     enemy.arrowHits++;
     const knockUp=enemy.arrowHits%2===0;
     // O impacto sempre empurra o Jugo PARA LONGE da flecha, nunca em direção ao arqueiro.
@@ -339,8 +339,8 @@ function draw(){
      ctx.restore();
    }
  }
- if(player.x<enemy.x){fighterDraw(player,player.ult>0?IMG.ult:IMG.jugo,player.ult>0?330:285,1);fighterDraw(enemy,IMG.archer,270,-1);}
- else{fighterDraw(enemy,IMG.archer,270,1);fighterDraw(player,player.ult>0?IMG.ult:IMG.jugo,player.ult>0?330:285,-1);}
+ if(player.x<enemy.x){fighterDraw(player,player.ult>0?IMG.ult:IMG.jugo,player.ult>0?315:270,1);fighterDraw(enemy,IMG.archer,255,-1);}
+ else{fighterDraw(enemy,IMG.archer,255,1);fighterDraw(player,player.ult>0?IMG.ult:IMG.jugo,player.ult>0?315:270,-1);}
  for(const e of effects){const x=worldX(e.x),y=floorY-e.y*H*.075;const k=e.life/e.max;if(e.type==="slash"){ctx.save();ctx.translate(x,y);ctx.scale(e.flip,1);ctx.globalCompositeOperation="lighter";ctx.strokeStyle=e.enemy?"rgba(255,100,90,.9)":"rgba(130,220,255,.95)";ctx.lineWidth=8*k;ctx.beginPath();ctx.arc(0,0,65*(1-k)+35,-1.1,1.0);ctx.stroke();ctx.restore();}else if(e.type==="hit"){ctx.fillStyle=`rgba(255,230,170,${k})`;ctx.beginPath();ctx.arc(x,y,45*(1-k)+8,0,TAU);ctx.fill();}else if(e.type==="stealth"){ctx.strokeStyle=`rgba(150,220,255,${k*.7})`;ctx.lineWidth=5;ctx.beginPath();ctx.arc(x,y,40+50*(1-k),0,TAU);ctx.stroke();}else if(e.type==="stun"){ctx.save();ctx.translate(x,y);ctx.globalCompositeOperation="lighter";ctx.strokeStyle=`rgba(255,220,80,${k})`;ctx.lineWidth=5;ctx.beginPath();ctx.arc(0,0,38+12*Math.sin(time*10),0,TAU);ctx.stroke();ctx.fillStyle=`rgba(255,245,170,${k})`;ctx.font="bold 28px sans-serif";ctx.textAlign="center";ctx.fillText("STUN",0,-35);ctx.restore();}else{ctx.fillStyle=`rgba(255,210,130,${k*.5})`;ctx.beginPath();ctx.arc(x,y,120*(1-k)+10,0,TAU);ctx.fill();}}
  // center line
  ctx.strokeStyle="rgba(255,220,150,.25)";ctx.setLineDash([8,10]);ctx.beginPath();ctx.moveTo(W/2,floorY-15);ctx.lineTo(W/2,floorY+10);ctx.stroke();ctx.setLineDash([]);
