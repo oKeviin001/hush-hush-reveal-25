@@ -21,7 +21,7 @@ app.innerHTML = `
   <section class="menu-screen select-screen hidden" id="characterSelect">
     <div class="select-top"><span>VEILØRIS</span><b>ESCOLHA SEU PERSONAGEM</b></div>
     <div class="selection-grid">
-      <button class="character-card selected"><div class="character-art"><img src="__JUGO__" alt="Jugo"></div><strong>JUGO</strong><small>DISPONÍVEL</small></button>
+      <button class="character-card selected"><div class="character-art"><img src="\${jugoSideUrl}" alt="Jugo"></div><strong>JUGO</strong><small>DISPONÍVEL</small></button>
       <button class="character-card locked" disabled><div class="question">?</div><strong>DESCONHECIDO</strong><small>BLOQUEADO</small></button>
       <button class="character-card locked" disabled><div class="question">?</div><strong>DESCONHECIDO</strong><small>BLOQUEADO</small></button>
       <button class="character-card locked" disabled><div class="question">?</div><strong>DESCONHECIDO</strong><small>BLOQUEADO</small></button>
@@ -33,8 +33,8 @@ app.innerHTML = `
   <section class="menu-screen select-screen hidden" id="opponentSelect">
     <div class="select-top"><span>VEILØRIS</span><b>ESCOLHA O OPONENTE</b></div>
     <div class="opponent-grid">
-      <button class="character-card locked" disabled><div class="character-art"><img src="__KNIGHT__" alt="Cavaleiro"></div><strong>CAVALEIRO</strong><small>BLOQUEADO</small></button>
-      <button class="character-card selected" id="archerChoice"><div class="character-art"><img src="__ARCHER__" alt="Arqueiro"></div><strong>ARQUEIRO</strong><small>DISPONÍVEL</small></button>
+      <button class="character-card locked" disabled><div class="character-art"><img src="\${knightUrl}" alt="Cavaleiro"></div><strong>CAVALEIRO</strong><small>BLOQUEADO</small></button>
+      <button class="character-card selected" id="archerChoice"><div class="character-art"><img src="\${archerUrl}" alt="Arqueiro"></div><strong>ARQUEIRO</strong><small>DISPONÍVEL</small></button>
     </div>
     <button class="select-confirm" id="opponentConfirm">TESTAR CONTRA O ARQUEIRO</button>
   </section>
