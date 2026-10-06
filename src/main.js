@@ -71,7 +71,7 @@ const input={x:0,y:0,keys:new Set()};
 
 function reset(){
   player={x:-5,y:0,vx:0,vy:0,facing:1,hp:MAX_HP,atk:0,hit:0,anim:0,ult:0,inv:0,alive:true};
-  enemy={x:5,y:0,vx:0,vy:0,facing:-1,hp:ENEMY_MAX_HP,atk:0,hit:0,anim:0,ai:0,shoot:0,alive:true};
+  enemy={x:5,y:0,vx:0,vy:0,facing:-1,hp:ENEMY_MAX_HP,atk:0,hit:0,anim:0,ai:0,shoot:0,arrowHits:0,alive:true};
   projectiles=[];effects=[];cds={A:0,B:0,C:0};ended=false;
   overlay.classList.add("hidden");roundText.textContent="ROUND "+round;fightMessage.textContent="JUGO";fightMessage.classList.remove("show");
   input.x=0;input.y=0;knob.style.transform="translate(-50%,-50%)";
@@ -173,9 +173,18 @@ function update(dt){
   p.life-=dt;
 
   if(p.type==="arrow"&&Math.abs(p.x-player.x)<.85&&Math.abs(p.y-(player.y+1))<.85){
-    damagePlayer(player.ult>0?22:38,-Math.sign(p.vx)*2.2);
+    // A cada segunda flecha que REALMENTE acerta, o arqueiro aplica knock-up.
+    enemy.arrowHits++;
+    const knockUp=enemy.arrowHits%2===0;
+    damagePlayer(player.ult>0?22:38,-Math.sign(p.vx)*(knockUp?6.5:2.2));
+    if(knockUp&&player.alive){
+      player.vy=9.5;
+      player.hit=.28;
+      effects.push({type:"knockup",x:player.x,y:player.y+1.1,life:.42,max:.42});
+    }else{
+      effects.push({type:"hit",x:p.x,y:p.y,life:.2,max:.2});
+    }
     p.life=0;
-    effects.push({type:"hit",x:p.x,y:p.y,life:.2,max:.2});
   }
   if(p.type==="orb"&&Math.abs(p.x-enemy.x)<1.0&&Math.abs(p.y-1)<1.35){damageEnemy(player.ult>0?45:18,player.facing*1.5);p.life=0;effects.push({type:"hit",x:p.x,y:p.y,life:.2,max:.2});}
   if(p.type==="creature"&&Math.abs(p.x-enemy.x)<1.15&&Math.abs(p.y-enemy.y)<1.4){damageEnemy(player.ult>0?95:50,player.facing*4);p.life=0;effects.push({type:"hit",x:p.x,y:1,life:.3,max:.3});}
@@ -231,6 +240,17 @@ function draw(){
    }else{
      ctx.fillStyle="rgba(90,190,255,.25)";ctx.beginPath();ctx.arc(x,y-20,22,0,TAU);ctx.fill();
      ctx.fillStyle="#75d8ff";ctx.beginPath();ctx.arc(x,y-20,8,0,TAU);ctx.fill();
+   }
+ }
+ for(const e of effects){
+   const x=W/2+e.x*W*.035,y=floorY-e.y*H*.075,k=e.life/e.max;
+   if(e.type==="knockup"){
+     ctx.save();ctx.translate(x,y);ctx.globalCompositeOperation="lighter";
+     ctx.strokeStyle=`rgba(255,220,120,${k*.9})`;ctx.lineWidth=5;
+     ctx.beginPath();ctx.arc(0,0,34+26*(1-k),0,TAU);ctx.stroke();
+     ctx.strokeStyle=`rgba(255,255,255,${k})`;ctx.lineWidth=3;
+     ctx.beginPath();ctx.moveTo(-20,18);ctx.lineTo(-34,-4);ctx.moveTo(20,18);ctx.lineTo(34,-4);ctx.stroke();
+     ctx.restore();
    }
  }
  if(player.x<enemy.x){fighterDraw(player,player.ult>0?IMG.ult:IMG.jugo,player.ult>0?330:285,1);fighterDraw(enemy,IMG.archer,270,-1);}
