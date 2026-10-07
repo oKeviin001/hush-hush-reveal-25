@@ -4,6 +4,8 @@ import jugoUltUrl from "./assets/jugo-ult.png";
 import archerUrl from "./assets/archer.png";
 import knightUrl from "./assets/knight.png";
 import creatureUrl from "./assets/creature.png";
+import ecronixUrl from "./assets/ecronix.svg";
+import kairaUrl from "./assets/kaira.svg";
 
 const app = document.querySelector("#app");
 app.innerHTML = `
@@ -21,9 +23,9 @@ app.innerHTML = `
   <section class="menu-screen select-screen hidden" id="characterSelect">
     <div class="select-top"><span>VEILØRIS</span><b>ESCOLHA SEU PERSONAGEM</b></div>
     <div class="selection-grid">
-      <button class="character-card selected"><div class="character-art"><img src="${jugoSideUrl}" alt="Jugo"></div><strong>JUGO</strong><small>DISPONÍVEL</small></button>
-      <button class="character-card locked" disabled><div class="question">?</div><strong>DESCONHECIDO</strong><small>BLOQUEADO</small></button>
-      <button class="character-card locked" disabled><div class="question">?</div><strong>DESCONHECIDO</strong><small>BLOQUEADO</small></button>
+      <button class="character-card selected" data-character="jugo"><div class="character-art"><img src="${jugoSideUrl}" alt="Jugo"></div><strong>JUGO</strong><small>DISPONÍVEL</small></button>
+      <button class="character-card" data-character="ecronix"><div class="character-art"><img src="${ecronixUrl}" alt="Ecronix"></div><strong>ECRONIX</strong><small>DISPONÍVEL</small></button>
+      <button class="character-card" data-character="kaira"><div class="character-art"><img src="${kairaUrl}" alt="Kaira"></div><strong>KAIRA</strong><small>DISPONÍVEL</small></button>
       <button class="character-card locked" disabled><div class="question">?</div><strong>DESCONHECIDO</strong><small>BLOQUEADO</small></button>
       <button class="character-card locked" disabled><div class="question">?</div><strong>DESCONHECIDO</strong><small>BLOQUEADO</small></button>
       <button class="character-card locked" disabled><div class="question">?</div><strong>DESCONHECIDO</strong><small>BLOQUEADO</small></button>
@@ -33,10 +35,11 @@ app.innerHTML = `
   <section class="menu-screen select-screen hidden" id="opponentSelect">
     <div class="select-top"><span>VEILØRIS</span><b>ESCOLHA O OPONENTE</b></div>
     <div class="opponent-grid">
-      <button class="character-card locked" disabled><div class="character-art"><img src="${knightUrl}" alt="Cavaleiro"></div><strong>CAVALEIRO</strong><small>BLOQUEADO</small></button>
-      <button class="character-card selected" id="archerChoice"><div class="character-art"><img src="${archerUrl}" alt="Arqueiro"></div><strong>ARQUEIRO</strong><small>DISPONÍVEL</small></button>
+      <button class="character-card selected" data-opponent="archer"><div class="character-art"><img src="${archerUrl}" alt="Arqueiro"></div><strong>ARQUEIRO</strong><small>DISPONÍVEL</small></button>
+      <button class="character-card" data-opponent="ecronix"><div class="character-art"><img src="${ecronixUrl}" alt="Ecronix"></div><strong>ECRONIX</strong><small>DISPONÍVEL</small></button>
+      <button class="character-card" data-opponent="kaira"><div class="character-art"><img src="${kairaUrl}" alt="Kaira"></div><strong>KAIRA</strong><small>DISPONÍVEL</small></button>
     </div>
-    <button class="select-confirm" id="opponentConfirm">TESTAR CONTRA O ARQUEIRO</button>
+    <button class="select-confirm" id="opponentConfirm">CONTINUAR</button>
   </section>
   <div class="ult-choice hidden" id="ultChoice">
   <div class="ult-choice-title">A IA ESTÁ ESCOLHENDO...</div>
@@ -111,8 +114,15 @@ const btn={};document.querySelectorAll(".skill").forEach(b=>btn[b.dataset.skill]
 
 const TAU=Math.PI*2,clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),lerp=(a,b,t)=>a+(b-a)*t;
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
-const IMG={jugo:new Image(),ult:new Image(),enemy:new Image(),creature:new Image(),archer:new Image()};
-IMG.jugo.src=jugoSideUrl;IMG.ult.src=jugoUltUrl;IMG.enemy=IMG.archer;IMG.archer.src=archerUrl;IMG.creature.src=creatureUrl;
+const IMG={jugo:new Image(),ult:new Image(),enemy:new Image(),creature:new Image(),archer:new Image(),ecronix:new Image(),kaira:new Image()};
+IMG.jugo.src=jugoSideUrl;IMG.ult.src=jugoUltUrl;IMG.enemy=IMG.archer;IMG.archer.src=archerUrl;IMG.creature.src=creatureUrl;IMG.ecronix.src=ecronixUrl;IMG.kaira.src=kairaUrl;
+const CHAR_NAME={jugo:"JUGO",archer:"ARQUEIRO",ecronix:"ECRONIX",kaira:"KAIRA"};
+let selectedCharacter="jugo",selectedOpponent="archer";
+function setupSelection(){
+ document.querySelectorAll("[data-character]").forEach(card=>card.addEventListener("pointerup",e=>{e.preventDefault();document.querySelectorAll("[data-character]").forEach(x=>x.classList.remove("selected"));card.classList.add("selected");selectedCharacter=card.dataset.character;}));
+ document.querySelectorAll("[data-opponent]").forEach(card=>card.addEventListener("pointerup",e=>{e.preventDefault();document.querySelectorAll("[data-opponent]").forEach(x=>x.classList.remove("selected"));card.classList.add("selected");selectedOpponent=card.dataset.opponent;opponentConfirm.textContent="TESTAR CONTRA O "+CHAR_NAME[selectedOpponent];}));
+}
+setupSelection();
 
 let W=0,H=0,dpr=1;
 function resize(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;canvas.width=W*dpr;canvas.height=H*dpr;canvas.style.width=W+"px";canvas.style.height=H+"px";ctx.setTransform(dpr,0,0,dpr,0,0);}
@@ -133,8 +143,8 @@ let player,enemy,projectiles,effects,cds,time=0,joyId=null,round=1,ended=false,c
 const input={x:0,y:0,keys:new Set()};
 
 function reset(){
-  player={x:-5,y:0,vx:0,vy:0,facing:1,hp:MAX_HP,atk:0,hit:0,anim:0,ult:0,inv:0,stun:0,alive:true};
-  enemy={x:5,y:0,vx:0,vy:0,facing:-1,hp:ENEMY_MAX_HP,atk:0,hit:0,anim:0,ai:0,shoot:0,arrowHits:0,stealth:0,stealthCd:0,ultCd:7,alive:true,ultChoiceOpen:false,ultChoicePending:false,ultChoiceDone:false,ultChoiceTimer:0,ultChoiceIndex:0,ultFollowup:"",ultFollowCount:0,ultFollowTimer:0,ultBActive:false};
+  player={kind:selectedCharacter,x:-5,y:0,vx:0,vy:0,facing:1,hp:MAX_HP,atk:0,hit:0,anim:0,ult:0,form:"human",inv:0,stun:0,alive:true};
+  enemy={kind:selectedOpponent,x:5,y:0,vx:0,vy:0,facing:-1,hp:ENEMY_MAX_HP,atk:0,hit:0,anim:0,ai:0,shoot:0,arrowHits:0,stealth:0,stealthCd:0,ultCd:7,alive:true,ultChoiceOpen:false,ultChoicePending:false,ultChoiceDone:false,ultChoiceTimer:0,ultChoiceIndex:0,ultFollowup:"",ultFollowCount:0,ultFollowTimer:0,ultBActive:false,form:"human"};
   projectiles=[];effects=[];cds={A:0,B:0,C:0};ended=false;cameraX=0;
   overlay.classList.add("hidden");roundText.textContent="ROUND "+round;fightMessage.textContent="JUGO";fightMessage.classList.remove("show");
   input.x=0;input.y=0;knob.style.transform="translate(-50%,-50%)";
@@ -159,19 +169,35 @@ function damagePlayer(amount,knock=0){if(!player.alive||player.inv>0)return;play
 function basicAttack(){
  if(ended||!player.alive||player.atk>0||player.stun>0)return;
  faceOpponent();player.atk=.38;player.anim=.32;
- if(isNear()){damageEnemy(player.ult>0?150:55,player.facing*5);effects.push({type:"slash",x:player.x+player.facing*1.15,y:1.1,life:.22,max:.22,flip:player.facing});}
+ const dmg=player.kind==="ecronix"?(player.ult>0?175:70):player.kind==="kaira"?(player.ult>0?155:60):(player.ult>0?150:55);
+ if(isNear()){damageEnemy(dmg,player.facing*(player.kind==="ecronix"?6:5));effects.push({type:"slash",x:player.x+player.facing*1.15,y:1.1,life:.22,max:.22,flip:player.facing,kind:player.kind});}
 }
 basic.addEventListener("pointerdown",e=>{e.preventDefault();e.stopPropagation();basicAttack();});
 
 function cast(k){
- if(ended||!player.alive)return;
- if(k==="C"){if(cds.C<=0){player.ult=8;cds.C=CD.C;player.inv=.35;effects.push({type:"burst",x:player.x,y:1,life:.6,max:.6});}return;}
- if(cds[k]>0)return;
+ if(ended||!player.alive||player.stun>0||cds[k]>0)return;
  faceOpponent();
- if(k==="A"){cds.A=CD.A;projectiles.push({type:"creature",x:player.x+player.facing*1.2,y:0,vx:player.facing*7,life:Infinity,owner:"player"});}
- if(k==="B"){cds.B=CD.B;for(let i=0;i<6;i++)projectiles.push({type:"orb",x:player.x+player.facing*.8,y:.8+(i%3)*.22,vx:player.facing*(7+i*.35),life:Infinity,dy:(i-2.5)*.42,owner:"player"});}
+ if(player.kind==="jugo"){
+  if(k==="A"){cds.A=CD.A;player.vx=player.facing*12;player.x=clamp(player.x+player.facing*2.2,-17,17);if(isNear())damageEnemy(player.ult>0?190:105,player.facing*7);effects.push({type:"jugoLance",x:player.x,y:1.1,life:.32,max:.32,flip:player.facing});}
+  else if(k==="B"){cds.B=CD.B;for(let i=0;i<6;i++)projectiles.push({type:"jugoOrb",x:player.x+player.facing*.9,y:.7+(i%3)*.32,vx:player.facing*(7.5+i*.25),vy:(i-2.5)*.18,life:2.2,owner:"player",index:i});}
+  else if(k==="C"){cds.C=CD.C;player.ult=4.8;player.inv=.5;effects.push({type:"jugoCollapse",x:enemy.x,y:1.2,life:1,max:1});damageEnemy(170,player.facing*8);}
+ }else if(player.kind==="ecronix"){
+  if(k==="A"){cds.A=CD.A;player.vx=player.facing*11;player.x=clamp(player.x+player.facing*2.5,-17,17);if(isNear())damageEnemy(player.ult>0?210:120,player.facing*8);effects.push({type:"ecronixClaw",x:player.x,y:1.1,life:.35,max:.35,flip:player.facing});}
+  else if(k==="B"){cds.B=CD.B;for(let i=0;i<3;i++)projectiles.push({type:"chaosOrb",x:player.x+player.facing,y:1+i*.35,vx:player.facing*(8+i),vy:(i-1)*.45,life:2.2,owner:"player"});}
+  else if(k==="C"){cds.C=CD.C;player.ult=5.5;player.form="final";player.inv=.55;if(isNear())damageEnemy(230,player.facing*9);effects.push({type:"ecronixFinal",x:player.x,y:1.2,life:.8,max:.8});}
+ }else if(player.kind==="kaira"){
+  if(k==="A"){cds.A=CD.A;player.vx=player.facing*10;player.x=clamp(player.x+player.facing*2,-17,17);if(isNear())damageEnemy(player.ult>0?180:105,player.facing*6);effects.push({type:"kairaClaw",x:player.x,y:1.15,life:.3,max:.3,flip:player.facing});}
+  else if(k==="B"){cds.B=CD.B;projectiles.push({type:"kairaShot",x:player.x+player.facing,y:1.55,vx:player.facing*16,vy:0,life:1.5,owner:"player"});}
+  else if(k==="C"){cds.C=CD.C;player.ult=5.2;player.form="beast";player.inv=.5;player.x=clamp(player.x+player.facing*1.6,-17,17);if(isNear())damageEnemy(240,player.facing*10);effects.push({type:"kairaUltimate",x:player.x,y:1.1,life:1,max:1});}
+ }
 }
 Object.entries(btn).forEach(([k,b])=>b.addEventListener("pointerdown",e=>{e.preventDefault();e.stopPropagation();b.classList.add("pressed");cast(k);setTimeout(()=>b.classList.remove("pressed"),100);}));
+function updateSkillLabels(){
+ const labels={jugo:["LANÇA","ÓRBITA","COLAPSO"],ecronix:["GARRAS","CAOS","FORMA FINAL"],kaira:["LANÇA","RIFLE","CAÇADORA"]}[player?.kind||"jugo"];
+ ["A","B","C"].forEach((k,i)=>btn[k].querySelector(".lbl").textContent=labels[i]);
+ document.querySelector(".player-card .fighter-name").textContent=CHAR_NAME[player?.kind||"jugo"];
+ document.querySelector(".enemy-card .fighter-name").textContent=CHAR_NAME[enemy?.kind||"archer"];
+}
 overlay.addEventListener("pointerdown",()=>{if(ended){round++;reset();}});
 
 function finish(win){if(ended)return;ended=true;fightMessage.textContent=win?"K.O.":"DERROTA";fightMessage.classList.add("show");setTimeout(()=>{document.querySelector("#overlayTitle").textContent=win?"JUGO VENCEU":"JUGO PERDEU";overlay.classList.remove("hidden");},500);}
@@ -213,7 +239,7 @@ function update(dt){
  time+=dt;
  if(ended){updateHud();return;}
  for(const k of Object.keys(cds))cds[k]=Math.max(0,cds[k]-dt);
- player.atk=Math.max(0,player.atk-dt);player.hit=Math.max(0,player.hit-dt);player.inv=Math.max(0,player.inv-dt);player.stun=Math.max(0,player.stun-dt);
+ player.atk=Math.max(0,player.atk-dt);player.hit=Math.max(0,player.hit-dt);player.inv=Math.max(0,player.inv-dt);player.stun=Math.max(0,player.stun-dt);player.ult=Math.max(0,player.ult-dt); if(player.ult<=0&&(player.kind==="ecronix"||player.kind==="kaira"))player.form="human";
  enemy.atk=Math.max(0,enemy.atk-dt);enemy.hit=Math.max(0,enemy.hit-dt);
  const left=input.keys.has("a")||input.keys.has("arrowleft"),right=input.keys.has("d")||input.keys.has("arrowright"),up=input.keys.has("w")||input.keys.has("arrowup");
  const move=clamp(input.x+(right?1:0)-(left?1:0),-1,1);
@@ -550,6 +576,7 @@ function draw(){
  ctx.strokeStyle="rgba(255,220,150,.25)";ctx.setLineDash([8,10]);ctx.beginPath();ctx.moveTo(W/2,floorY-15);ctx.lineTo(W/2,floorY+10);ctx.stroke();ctx.setLineDash([]);
 }
 function updateHud(){
+ updateSkillLabels();
  playerHp.style.width=(player.hp/MAX_HP*100)+"%";enemyHp.style.width=(enemy.hp/ENEMY_MAX_HP*100)+"%";
  for(const k of ["A","B","C"]){const b=btn[k];const left=cds[k];b.querySelector(".cd").style.setProperty("--cd",clamp(left/(k==="C"?CD.C:CD[k]),0,1));b.querySelector(".cdt").textContent=left>0?Math.ceil(left):"";}
  basic.querySelector(".basic-cd").style.setProperty("--basic-cd",clamp(player.atk/.38,0,1));
