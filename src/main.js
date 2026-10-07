@@ -261,6 +261,8 @@ function update(dt){
 
  const distance=Math.abs(dx);
 
+ // IA DOS NOVOS PERSONAGENS.
+ if(enemy.kind==="archer"){
  // DUAS LINHAS INVISÍVEIS DE DEFESA DO ARQUEIRO.
  // Linha 1: se Jugo entra aqui, o arqueiro tenta disparar a ultimate.
  // Linha 2: se Jugo passa ainda mais perto, o arqueiro fica invisível e foge.
@@ -298,7 +300,50 @@ function update(dt){
    enemy.anim+=dt*(Math.abs(enemy.vx)*1.8+2);
  }
 
- // A arena é maior que a tela. A câmera acompanha o meio dos dois lutadores
+
+ }else if(enemy.kind==="ecronix"){
+   enemy.facing=dx>=0?1:-1;
+   const close=distance<2.2;
+   if(!close){
+     enemy.vx=clamp(dx*1.5,-5.8,5.8);
+     if(enemy.shoot<=0&&distance<7.5){
+       enemy.shoot=.9;enemy.atk=.35;
+       projectiles.push({type:"enemyChaosOrb",x:enemy.x+enemy.facing,y:1.1,vx:enemy.facing*8,vy:0,life:2,owner:"enemy"});
+       effects.push({type:"bowshot",x:enemy.x+enemy.facing,y:1.1,life:.16,max:.16,enemy:true});
+     }
+   }else{
+     enemy.vx=0;
+     if(enemy.atk<=0){enemy.atk=.55;damagePlayer(65,enemy.facing*5);effects.push({type:"ecronixClaw",x:enemy.x+enemy.facing,y:1.1,life:.3,max:.3,flip:enemy.facing,enemy:true});}
+   }
+   if(enemy.ultCd<=0&&distance<6.5){
+     enemy.ultCd=15;enemy.atk=.8;enemy.form="final";
+     damagePlayer(150,enemy.facing*7);effects.push({type:"ecronixFinal",x:enemy.x,y:1.2,life:.8,max:.8,enemy:true});
+   }
+   enemy.x=clamp(enemy.x+enemy.vx*dt,-17,17);
+   enemy.anim+=dt*(Math.abs(enemy.vx)*1.8+2);
+ }else if(enemy.kind==="kaira"){
+   enemy.facing=dx>=0?1:-1;
+   const preferred=4.8;
+   if(distance<2.4){
+     enemy.vx=enemy.facing>0?-5.5:5.5;
+     if(enemy.atk<=0){enemy.atk=.5;damagePlayer(60,enemy.facing*5);effects.push({type:"kairaClaw",x:enemy.x+enemy.facing,y:1.15,life:.3,max:.3,flip:enemy.facing,enemy:true});}
+   }else if(distance>preferred+.9){
+     enemy.vx=clamp(dx*1.7,-5.5,5.5);
+   }else{
+     enemy.vx=0;
+     if(enemy.shoot<=0){
+       enemy.shoot=1.15;enemy.atk=.35;
+       projectiles.push({type:"enemyKairaShot",x:enemy.x+enemy.facing,y:1.55,vx:enemy.facing*15,vy:0,life:1.6,owner:"enemy"});
+     }
+   }
+   if(enemy.ultCd<=0&&distance<8){
+     enemy.ultCd=16;enemy.atk=.8;enemy.form="beast";
+     enemy.x=clamp(enemy.x+enemy.facing*1.8,-17,17);
+     damagePlayer(165,enemy.facing*8);effects.push({type:"kairaUltimate",x:enemy.x,y:1.1,life:1,max:1,enemy:true});
+   }
+   enemy.x=clamp(enemy.x+enemy.vx*dt,-17,17);
+   enemy.anim+=dt*(Math.abs(enemy.vx)*1.8+2);
+ } // A arena é maior que a tela. A câmera acompanha o meio dos dois lutadores
  // e para antes das extremidades do palco, como em um jogo de luta 2D.
  const landscape=W>=H;
  const worldScale=landscape?.04:.065;
