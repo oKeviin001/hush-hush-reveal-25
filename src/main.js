@@ -59,9 +59,10 @@ app.innerHTML = `
     </div>
   </div>
 
-  <div class="fight-message" id="fightMessage">JUGO</div>
+  <div class="fight-message" id="fightMessage">JUGO VS ARQUEIRO</div>
 
   <div class="orientation-hint" id="orientationHint">RECOMENDADO: JOGUE NA HORIZONTAL<br><span>Você também pode jogar na vertical.</span></div>
+  <div class="arena-banner" id="arenaBanner"><span>MAPA 01</span><b>DISTRITO ZERO</b></div>
 
   <div class="controls fighter-controls">
     <div class="joystick" id="joystick" aria-label="Movimento">
@@ -146,7 +147,7 @@ function reset(){
   player={kind:selectedCharacter,x:-5,y:0,vx:0,vy:0,facing:1,hp:MAX_HP,atk:0,hit:0,anim:0,ult:0,form:"human",inv:0,stun:0,alive:true};
   enemy={kind:selectedOpponent,x:5,y:0,vx:0,vy:0,facing:-1,hp:ENEMY_MAX_HP,atk:0,hit:0,anim:0,ai:0,shoot:0,arrowHits:0,stealth:0,stealthCd:0,ultCd:7,alive:true,ultChoiceOpen:false,ultChoicePending:false,ultChoiceDone:false,ultChoiceTimer:0,ultChoiceIndex:0,ultFollowup:"",ultFollowCount:0,ultFollowTimer:0,ultBActive:false,form:"human"};
   projectiles=[];effects=[];cds={A:0,B:0,C:0};ended=false;cameraX=0;
-  overlay.classList.add("hidden");roundText.textContent="ROUND "+round;fightMessage.textContent="JUGO";fightMessage.classList.remove("show");
+  overlay.classList.add("hidden");roundText.textContent="ROUND "+round;fightMessage.textContent=CHAR_NAME[player.kind]+" VS "+CHAR_NAME[enemy.kind];fightMessage.classList.remove("show");
   input.x=0;input.y=0;knob.style.transform="translate(-50%,-50%)";
 }
 
@@ -200,7 +201,7 @@ function updateSkillLabels(){
 }
 overlay.addEventListener("pointerdown",()=>{if(ended){round++;reset();}});
 
-function finish(win){if(ended)return;ended=true;fightMessage.textContent=win?"K.O.":"DERROTA";fightMessage.classList.add("show");setTimeout(()=>{document.querySelector("#overlayTitle").textContent=win?"JUGO VENCEU":"JUGO PERDEU";overlay.classList.remove("hidden");},500);}
+function finish(win){if(ended)return;ended=true;const winner=CHAR_NAME[win?player.kind:enemy.kind]||"PERSONAGEM";fightMessage.textContent=win?"K.O.":"DERROTA";fightMessage.classList.add("show");setTimeout(()=>{document.querySelector("#overlayTitle").textContent=winner+" VENCEU";overlay.classList.remove("hidden");},500);}
 
 
 function openArcherUltimateChoice(){
@@ -261,14 +262,15 @@ function update(dt){
 
  const distance=Math.abs(dx);
 
+ // Linhas de distância do mapa usadas pelo comportamento de longo alcance.
+ const ULT_LINE=11.5;
+ const STEALTH_LINE=6.5;
+
  // IA DOS NOVOS PERSONAGENS.
  if(enemy.kind==="archer"){
  // DUAS LINHAS INVISÍVEIS DE DEFESA DO ARQUEIRO.
  // Linha 1: se Jugo entra aqui, o arqueiro tenta disparar a ultimate.
  // Linha 2: se Jugo passa ainda mais perto, o arqueiro fica invisível e foge.
- const ULT_LINE=11.5;
- const STEALTH_LINE=6.5;
-
  // O arqueiro sempre procura o ponto MAIS DISTANTE do Jugo.
  // Não existe "voltar para onde estava": a referência é sempre a posição atual do Jugo.
  const leftDistance=Math.abs(player.x-(-17));
@@ -365,7 +367,7 @@ function update(dt){
    enemy.vx=0;
    enemy.shoot=0;
    enemy.atk=0;
- }else if(enemy.stealth<=0&&distance<=ULT_LINE&&distance>STEALTH_LINE&&enemy.ultCd<=0){
+ }else if(enemy.kind==="archer"&&enemy.stealth<=0&&distance<=ULT_LINE&&distance>STEALTH_LINE&&enemy.ultCd<=0){
    enemy.ultCd=20;
    enemy.atk=.8;
    enemy.anim=.65;
@@ -373,13 +375,11 @@ function update(dt){
    const speed=14.5;
    projectiles.push({type:"ultArrow",x:enemy.x+enemy.facing*1.4,y:arrowY,vx:enemy.facing*speed,vy:0,life:2.0,owner:"enemy"});
    effects.push({type:"ultShot",x:enemy.x+enemy.facing*1.0,y:1.25,life:.45,max:.45,enemy:true});
- }else if(enemy.stealth<=0&&distance>STEALTH_LINE&&enemy.shoot<=0){
+ }else if(enemy.kind==="archer"&&enemy.stealth<=0&&distance>STEALTH_LINE&&enemy.shoot<=0){
    enemy.shoot=1.35;
    enemy.atk=.48;
    enemy.anim=.45;
    const pattern=enemy.arrowHits%3;
-   // A flecha frontal vai exatamente na faixa do peito do Jugo.
-   // A flecha alta começa acima da cabeça e sobe em diagonal.
    const highArrow=pattern===2;
    const arrowY=highArrow?1.72:1.35;
    const speed=12.5;
@@ -508,22 +508,76 @@ function update(dt){
 }
 
 function drawBackground(){
- const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,"#09071a");g.addColorStop(.55,"#18113a");g.addColorStop(1,"#30152e");ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
- const horizon=H*.58;ctx.fillStyle="rgba(110,80,190,.14)";ctx.fillRect(0,horizon,W,H*.22);
- for(let i=0;i<12;i++){
-   const x=((i*W/11-cameraX*W*.012)% (W+120)+W+120)%(W+120)-60;
-   ctx.fillStyle="rgba(190,130,255,.08)";
-   ctx.fillRect(x,horizon-80-(i%3)*25,18+(i%4)*20,80+(i%3)*25);
+ // MAPA 01 — DISTRITO ZERO
+ // Cenário em camadas: cidade distante, estruturas próximas e palco de batalha.
+ const sky=ctx.createLinearGradient(0,0,0,H);
+ sky.addColorStop(0,"#04030d");sky.addColorStop(.42,"#0c1230");sky.addColorStop(.7,"#21132f");sky.addColorStop(1,"#08070f");
+ ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+
+ const horizon=H*.54;
+ const floorY=H*.78;
+ const parallax=(amount)=>cameraX*W*amount;
+
+ // Lua/portal distante.
+ ctx.save();ctx.globalCompositeOperation="lighter";
+ const moonX=W*.78-parallax(.006),moonY=H*.22,moonR=Math.min(W,H)*.075;
+ const moon=ctx.createRadialGradient(moonX,moonY,moonR*.15,moonX,moonY,moonR);
+ moon.addColorStop(0,"rgba(235,220,255,.34)");moon.addColorStop(.35,"rgba(155,120,255,.14)");moon.addColorStop(1,"rgba(80,60,180,0)");
+ ctx.fillStyle=moon;ctx.beginPath();ctx.arc(moonX,moonY,moonR,0,TAU);ctx.fill();ctx.restore();
+
+ // Cidade no horizonte.
+ ctx.fillStyle="#08091a";
+ const blocks=[[-.02,.38,.12,.17],[.11,.31,.08,.24],[.2,.4,.14,.15],[.34,.28,.09,.27],[.46,.36,.13,.19],[.61,.25,.1,.30],[.73,.34,.14,.21],[.89,.29,.09,.26]];
+ for(const [px,py,pw,ph] of blocks)ctx.fillRect(px*W-parallax(.012),py*H,pw*W,ph*H);
+ ctx.fillStyle="rgba(112,190,255,.18)";
+ for(let i=0;i<48;i++){const bx=(i*137%(Math.max(1,W+80)))-40-parallax(.014),by=H*.33+(i*47%(H*.25));ctx.fillRect(bx,by,3,7);}
+
+ // Estruturas próximas.
+ ctx.fillStyle="rgba(15,17,39,.96)";
+ const nearOffset=parallax(.025);
+ for(let i=-2;i<9;i++){
+   const x=i*W*.15-nearOffset,h=H*(.12+(i%3)*.035);
+   ctx.fillRect(x,horizon-h,42,h);
+   ctx.fillStyle="rgba(103,84,190,.18)";ctx.fillRect(x+8,horizon-h+18,6,h*.72);ctx.fillStyle="rgba(15,17,39,.96)";
  }
- const floorY=H*.78;ctx.fillStyle="#100d1f";ctx.fillRect(0,floorY,W,H-floorY);
- ctx.strokeStyle="rgba(150,130,220,.18)";ctx.lineWidth=1;
- for(let i=-8;i<=8;i++){
-   const worldGrid=i*2;
-   const x=worldX(worldGrid);
-   ctx.beginPath();ctx.moveTo(W/2+(x-W/2)*.25,floorY);ctx.lineTo(x,H);ctx.stroke();
+ ctx.strokeStyle="rgba(120,145,220,.14)";ctx.lineWidth=2;
+ for(let i=0;i<5;i++){const x1=-W*.1+i*W*.28-parallax(.02);ctx.beginPath();ctx.moveTo(x1,0);ctx.quadraticCurveTo(W*.5,H*.18+i*8,x1+W*.32,H*.52);ctx.stroke();}
+
+ // Parede ao fundo do palco.
+ ctx.fillStyle="rgba(4,5,13,.94)";ctx.fillRect(0,horizon,W,floorY-horizon);
+ ctx.strokeStyle="rgba(145,105,255,.2)";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,horizon);ctx.lineTo(W,horizon);ctx.stroke();
+
+ // Piso principal.
+ const floor=ctx.createLinearGradient(0,floorY,0,H);floor.addColorStop(0,"#15142a");floor.addColorStop(1,"#05060b");
+ ctx.fillStyle=floor;ctx.fillRect(0,floorY,W,H-floorY);
+
+ // Perspectiva.
+ ctx.strokeStyle="rgba(110,135,220,.18)";ctx.lineWidth=1;
+ for(let i=-10;i<=10;i++){const x=worldX(i*2);ctx.beginPath();ctx.moveTo(W/2+(x-W/2)*.2,floorY);ctx.lineTo(x,H);ctx.stroke();}
+ for(let i=0;i<=7;i++){const t=i/7,y=floorY+Math.pow(t,1.55)*(H-floorY);ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+ // Emblema central do mapa.
+ ctx.fillStyle="rgba(150,90,255,.08)";ctx.fillRect(0,floorY-8,W,16);
+ const centerX=worldX(0),centerY=floorY-2,r=Math.min(W,H)*.07;
+ ctx.strokeStyle="rgba(230,190,255,.25)";ctx.lineWidth=2;
+ ctx.beginPath();ctx.arc(centerX,centerY,r,0,TAU);ctx.stroke();
+ ctx.beginPath();ctx.moveTo(centerX-r*.65,centerY);ctx.lineTo(centerX+r*.65,centerY);ctx.moveTo(centerX,centerY-r*.65);ctx.lineTo(centerX,centerY+r*.65);ctx.stroke();
+
+ // Torres que marcam os dois extremos do campo.
+ for(const side of [-1,1]){
+   const sx=worldX(side*16.6);
+   ctx.fillStyle="rgba(9,8,20,.98)";ctx.fillRect(sx-18,horizon-20,36,floorY-horizon+20);
+   ctx.strokeStyle="rgba(175,110,255,.5)";ctx.lineWidth=3;
+   ctx.beginPath();ctx.moveTo(sx-18,horizon-20);ctx.lineTo(sx-18,floorY);ctx.moveTo(sx+18,horizon-20);ctx.lineTo(sx+18,floorY);ctx.stroke();
+   ctx.fillStyle="rgba(255,75,190,.8)";ctx.fillRect(sx-12,horizon+15,24,4);
  }
- for(let i=0;i<6;i++){const y=floorY+i*(H-floorY)/6;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
- ctx.fillStyle="rgba(255,190,100,.08)";ctx.fillRect(W*.05,floorY-3,W*.9,6);
+
+ // Bordas de segurança.
+ for(const side of [-1,1]){
+   const sx=worldX(side*17);
+   ctx.save();ctx.globalCompositeOperation="lighter";ctx.strokeStyle="rgba(255,185,80,.7)";ctx.lineWidth=5;
+   ctx.beginPath();ctx.moveTo(sx,floorY-14);ctx.lineTo(sx,H);ctx.stroke();ctx.restore();
+ }
 }
 function sprite(img,x,y,h,flip=1,alpha=1,filter="none"){
  if(!img.complete||!img.naturalWidth)return;
