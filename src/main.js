@@ -595,8 +595,41 @@ function drawBackground(){
  }
 }
 function sprite(img,x,y,h,flip=1,alpha=1,filter="none"){
- if(!img.complete||!img.naturalWidth)return;
+ if(!img||!img.complete||!img.naturalWidth)return;
  const w=h*img.naturalWidth/img.naturalHeight;ctx.save();ctx.translate(x,y);ctx.scale(flip,1);ctx.globalAlpha=alpha;ctx.filter=filter;ctx.drawImage(img,-w/2,-h,w,h);ctx.restore();
+}
+// Rig de duas fatias: tronco/cabeça/arma (cima) e quadril/pernas (baixo) com transformações próprias.
+function rig(img,x,y,h,flip,alpha,filter,p){
+ if(!img||!img.complete||!img.naturalWidth)return;
+ const iw=img.naturalWidth,ih=img.naturalHeight,w=h*iw/ih,cut=.56,hip=h*(1-cut);
+ ctx.save();ctx.translate(x,y);ctx.scale(flip*(p.sx||1),p.sy||1);ctx.rotate(p.lean||0);ctx.globalAlpha=alpha;ctx.filter=filter;
+ // pernas
+ ctx.save();ctx.translate(0,0);ctx.transform(1,0,p.legShear||0,1,0,0);
+ ctx.drawImage(img,0,ih*cut,iw,ih*(1-cut),-w/2,-hip,w,hip);ctx.restore();
+ // tronco gira no quadril
+ ctx.save();ctx.translate(p.torsoX||0,-hip+(p.torsoY||0));ctx.rotate(p.torso||0);ctx.scale(1,p.breath||1);
+ ctx.drawImage(img,0,0,iw,ih*cut+2,-w/2,-h*cut,w,h*cut+2*h/ih);ctx.restore();
+ ctx.restore();
+}
+function pose(f){
+ const a=f.act,n=a?a.name:"",k=a?a.t/a.dur:0,P={sx:1,sy:1,lean:0,legShear:0,torso:0,torsoX:0,torsoY:0,breath:1};
+ const sp=Math.abs(f.vx),moving=sp>.1&&!f.stun;
+ if(f.stun>0){P.torso=Math.sin(time*9)*.12;P.lean=Math.sin(time*5)*.05;P.sy=.95;return P;}
+ if(f.kb>0){P.lean=-.18*Math.min(1,f.kb/.3);P.torso=-.15;return P;}
+ if(f.hit>0){P.torso=-.2;P.torsoX=-6;return P;}
+ if(f.y>.05||f.air){const up=f.vy>0;P.sy=up?1.08:.96;P.sx=up?.94:1.03;P.legShear=up?-.12:.1;P.torso=up?-.05:.06;return P;}
+ if(f.land>0){P.sy=.88;P.sx=1.08;return P;}
+ if(n){
+  // antecipação -> golpe -> recuperação
+  const wind=k<.3?k/.3:0,strike=k>=.3&&k<.6?(k-.3)/.3:k>=.6?1-(k-.6)/.4:0;
+  if(n==="attack"||n==="A"){P.torso=-.25*wind+.38*strike;P.torsoX=14*strike-6*wind;P.lean=.08*strike;P.legShear=-.15*strike;P.sx=1+.06*strike;return P;}
+  if(n==="B"){P.torso=-.18*wind+.12*strike;P.torsoX=-4*strike;P.sy=1+.04*wind;return P;}
+  if(n==="ultDraw"){P.torso=-.22*Math.min(1,k*2);P.torsoX=-8*Math.min(1,k*2);P.sy=.97;P.breath=1+.03*Math.sin(time*30);return P;}
+  if(n==="release"){P.torso=.15*(1-k);P.torsoX=-10*(1-k);return P;}
+  if(n==="transform"){const s=Math.sin(k*Math.PI);P.sy=1-.12*s+(k>.6?.1*(1-k):0);P.sx=1+.08*s;P.torso=Math.sin(time*40)*.05*s;return P;}
+ }
+ if(moving){const c=Math.sin(f.anim*9);P.legShear=c*.22;P.torso=.07+c*.04;P.torsoY=-Math.abs(c)*4;P.lean=.04;return P;}
+ P.breath=1+Math.sin(time*2.6)*.018;P.torso=Math.sin(time*1.3)*.015;return P;
 }
 // Câmera mais afastada na horizontal: mais espaço visual entre os lutadores
 // e mais tempo/espaço para as flechas atravessarem a arena.
@@ -606,9 +639,20 @@ function fighterDraw(f,img,h,flip){
  const landscape=W>=H;
  const scale=landscape?clamp(H/760,.23,.30):Math.min(W/520,.68);
  const x=worldX(f.x),y=ground-f.y*H*.075;
- const moving=Math.abs(f.vx)>.1,bob=moving?Math.abs(Math.sin(f.anim*5))*.025:Math.sin(time*2.5)*.012;
- const alpha=f===enemy&&enemy.stealth>0?.10:1;
- sprite(img,x,y-bob*H,h*scale,flip,alpha,f.hit>0?"brightness(2) saturate(.5)":"none");
+ const alpha=f===enemy&&enemy.stealth>0?.10:1,P=pose(f),flt=f.hit>0?"brightness(2) saturate(.5)":f.stun>0?"saturate(.6) brightness(1.2)":"none";
+ ctx.save();ctx.globalAlpha=.35*alpha;ctx.fillStyle="#000";ctx.beginPath();ctx.ellipse(x,ground,h*scale*.22*(1-Math.min(.5,f.y*.08)),h*scale*.045,0,0,TAU);ctx.fill();ctx.restore();
+ const tr=f.act&&f.act.name==="transform"?f.act.t/f.act.dur:-1;
+ if(tr>=0&&f.fromImg&&f.fromImg!==img){
+  // transição: energia sobe, forma antiga some, nova forma surge
+  const glow=Math.sin(tr*Math.PI);
+  ctx.save();ctx.globalCompositeOperation="lighter";const g=ctx.createRadialGradient(x,y-h*scale*.45,4,x,y-h*scale*.45,h*scale*.7);g.addColorStop(0,`rgba(255,240,255,${.7*glow})`);g.addColorStop(1,"rgba(160,80,255,0)");ctx.fillStyle=g;ctx.fillRect(x-h*scale,y-h*scale*1.2,h*scale*2,h*scale*1.3);ctx.restore();
+  rig(f.fromImg,x,y,h*scale,flip,alpha*(1-Math.min(1,tr*1.6)),`brightness(${1+glow*2})`,P);
+  rig(img,x,y,h*scale,flip,alpha*Math.max(0,(tr-.35)/.65),`brightness(${1+glow*1.5})`,P);
+ }else{
+  if(f.act&&f.act.name==="A"){rig(img,x-flip*28,y,h*scale,flip,alpha*.25,"brightness(1.8) saturate(1.6)",P);}
+  rig(img,x,y,h*scale,flip,alpha,flt,P);
+ }
+ if(tr<0)f.fromImg=img;
  if(f===player&&f.kind==="ecronix"&&f.form==="final"){
    ctx.save();ctx.globalCompositeOperation="lighter";ctx.strokeStyle="rgba(255,35,110,.8)";ctx.lineWidth=5;ctx.beginPath();ctx.arc(x,y-h*scale*.45,48,0,TAU);ctx.stroke();ctx.restore();
  }
@@ -710,8 +754,8 @@ function draw(){
      ctx.restore();
    }
  }
- const playerImg=player.kind==="ecronix"?IMG.ecronix:player.kind==="kaira"?IMG.kaira:(player.ult>0?IMG.ult:IMG.jugo);
- const enemyImg=enemy.kind==="ecronix"?IMG.ecronix:enemy.kind==="kaira"?IMG.kaira:IMG.archer;
+ const formImg=f=>f.kind==="ecronix"?(f.form==="final"?IMG.ecronixFinal:IMG.ecronix):f.kind==="kaira"?(f.form==="beast"?IMG.kairaBeast:IMG.kaira):f.kind==="archer"?IMG.archer:(f.ult>0?IMG.ult:IMG.jugo);
+ const playerImg=formImg(player),enemyImg=formImg(enemy);
  const playerH=player.kind==="ecronix"?285:player.kind==="kaira"?275:(player.ult>0?315:270);
  const enemyH=enemy.kind==="ecronix"?285:enemy.kind==="kaira"?275:255;
  if(player.x<enemy.x){fighterDraw(player,playerImg,playerH,1);fighterDraw(enemy,enemyImg,enemyH,-1);}
