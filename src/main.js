@@ -639,9 +639,20 @@ function fighterDraw(f,img,h,flip){
  const landscape=W>=H;
  const scale=landscape?clamp(H/760,.23,.30):Math.min(W/520,.68);
  const x=worldX(f.x),y=ground-f.y*H*.075;
- const moving=Math.abs(f.vx)>.1,bob=moving?Math.abs(Math.sin(f.anim*5))*.025:Math.sin(time*2.5)*.012;
- const alpha=f===enemy&&enemy.stealth>0?.10:1;
- sprite(img,x,y-bob*H,h*scale,flip,alpha,f.hit>0?"brightness(2) saturate(.5)":"none");
+ const alpha=f===enemy&&enemy.stealth>0?.10:1,P=pose(f),flt=f.hit>0?"brightness(2) saturate(.5)":f.stun>0?"saturate(.6) brightness(1.2)":"none";
+ ctx.save();ctx.globalAlpha=.35*alpha;ctx.fillStyle="#000";ctx.beginPath();ctx.ellipse(x,ground,h*scale*.22*(1-Math.min(.5,f.y*.08)),h*scale*.045,0,0,TAU);ctx.fill();ctx.restore();
+ const tr=f.act&&f.act.name==="transform"?f.act.t/f.act.dur:-1;
+ if(tr>=0&&f.fromImg&&f.fromImg!==img){
+  // transição: energia sobe, forma antiga some, nova forma surge
+  const glow=Math.sin(tr*Math.PI);
+  ctx.save();ctx.globalCompositeOperation="lighter";const g=ctx.createRadialGradient(x,y-h*scale*.45,4,x,y-h*scale*.45,h*scale*.7);g.addColorStop(0,`rgba(255,240,255,${.7*glow})`);g.addColorStop(1,"rgba(160,80,255,0)");ctx.fillStyle=g;ctx.fillRect(x-h*scale,y-h*scale*1.2,h*scale*2,h*scale*1.3);ctx.restore();
+  rig(f.fromImg,x,y,h*scale,flip,alpha*(1-Math.min(1,tr*1.6)),`brightness(${1+glow*2})`,P);
+  rig(img,x,y,h*scale,flip,alpha*Math.max(0,(tr-.35)/.65),`brightness(${1+glow*1.5})`,P);
+ }else{
+  if(f.act&&f.act.name==="A"){rig(img,x-flip*28,y,h*scale,flip,alpha*.25,"brightness(1.8) saturate(1.6)",P);}
+  rig(img,x,y,h*scale,flip,alpha,flt,P);
+ }
+ if(tr<0)f.fromImg=img;
  if(f===player&&f.kind==="ecronix"&&f.form==="final"){
    ctx.save();ctx.globalCompositeOperation="lighter";ctx.strokeStyle="rgba(255,35,110,.8)";ctx.lineWidth=5;ctx.beginPath();ctx.arc(x,y-h*scale*.45,48,0,TAU);ctx.stroke();ctx.restore();
  }
@@ -743,8 +754,8 @@ function draw(){
      ctx.restore();
    }
  }
- const playerImg=player.kind==="ecronix"?IMG.ecronix:player.kind==="kaira"?IMG.kaira:(player.ult>0?IMG.ult:IMG.jugo);
- const enemyImg=enemy.kind==="ecronix"?IMG.ecronix:enemy.kind==="kaira"?IMG.kaira:IMG.archer;
+ const formImg=f=>f.kind==="ecronix"?(f.form==="final"?IMG.ecronixFinal:IMG.ecronix):f.kind==="kaira"?(f.form==="beast"?IMG.kairaBeast:IMG.kaira):f.kind==="archer"?IMG.archer:(f.ult>0?IMG.ult:IMG.jugo);
+ const playerImg=formImg(player),enemyImg=formImg(enemy);
  const playerH=player.kind==="ecronix"?285:player.kind==="kaira"?275:(player.ult>0?315:270);
  const enemyH=enemy.kind==="ecronix"?285:enemy.kind==="kaira"?275:255;
  if(player.x<enemy.x){fighterDraw(player,playerImg,playerH,1);fighterDraw(enemy,enemyImg,enemyH,-1);}
