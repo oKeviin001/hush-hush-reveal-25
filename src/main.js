@@ -595,8 +595,41 @@ function drawBackground(){
  }
 }
 function sprite(img,x,y,h,flip=1,alpha=1,filter="none"){
- if(!img.complete||!img.naturalWidth)return;
+ if(!img||!img.complete||!img.naturalWidth)return;
  const w=h*img.naturalWidth/img.naturalHeight;ctx.save();ctx.translate(x,y);ctx.scale(flip,1);ctx.globalAlpha=alpha;ctx.filter=filter;ctx.drawImage(img,-w/2,-h,w,h);ctx.restore();
+}
+// Rig de duas fatias: tronco/cabeça/arma (cima) e quadril/pernas (baixo) com transformações próprias.
+function rig(img,x,y,h,flip,alpha,filter,p){
+ if(!img||!img.complete||!img.naturalWidth)return;
+ const iw=img.naturalWidth,ih=img.naturalHeight,w=h*iw/ih,cut=.56,hip=h*(1-cut);
+ ctx.save();ctx.translate(x,y);ctx.scale(flip*(p.sx||1),p.sy||1);ctx.rotate(p.lean||0);ctx.globalAlpha=alpha;ctx.filter=filter;
+ // pernas
+ ctx.save();ctx.translate(0,0);ctx.transform(1,0,p.legShear||0,1,0,0);
+ ctx.drawImage(img,0,ih*cut,iw,ih*(1-cut),-w/2,-hip,w,hip);ctx.restore();
+ // tronco gira no quadril
+ ctx.save();ctx.translate(p.torsoX||0,-hip+(p.torsoY||0));ctx.rotate(p.torso||0);ctx.scale(1,p.breath||1);
+ ctx.drawImage(img,0,0,iw,ih*cut+2,-w/2,-h*cut,w,h*cut+2*h/ih);ctx.restore();
+ ctx.restore();
+}
+function pose(f){
+ const a=f.act,n=a?a.name:"",k=a?a.t/a.dur:0,P={sx:1,sy:1,lean:0,legShear:0,torso:0,torsoX:0,torsoY:0,breath:1};
+ const sp=Math.abs(f.vx),moving=sp>.1&&!f.stun;
+ if(f.stun>0){P.torso=Math.sin(time*9)*.12;P.lean=Math.sin(time*5)*.05;P.sy=.95;return P;}
+ if(f.kb>0){P.lean=-.18*Math.min(1,f.kb/.3);P.torso=-.15;return P;}
+ if(f.hit>0){P.torso=-.2;P.torsoX=-6;return P;}
+ if(f.y>.05||f.air){const up=f.vy>0;P.sy=up?1.08:.96;P.sx=up?.94:1.03;P.legShear=up?-.12:.1;P.torso=up?-.05:.06;return P;}
+ if(f.land>0){P.sy=.88;P.sx=1.08;return P;}
+ if(n){
+  // antecipação -> golpe -> recuperação
+  const wind=k<.3?k/.3:0,strike=k>=.3&&k<.6?(k-.3)/.3:k>=.6?1-(k-.6)/.4:0;
+  if(n==="attack"||n==="A"){P.torso=-.25*wind+.38*strike;P.torsoX=14*strike-6*wind;P.lean=.08*strike;P.legShear=-.15*strike;P.sx=1+.06*strike;return P;}
+  if(n==="B"){P.torso=-.18*wind+.12*strike;P.torsoX=-4*strike;P.sy=1+.04*wind;return P;}
+  if(n==="ultDraw"){P.torso=-.22*Math.min(1,k*2);P.torsoX=-8*Math.min(1,k*2);P.sy=.97;P.breath=1+.03*Math.sin(time*30);return P;}
+  if(n==="release"){P.torso=.15*(1-k);P.torsoX=-10*(1-k);return P;}
+  if(n==="transform"){const s=Math.sin(k*Math.PI);P.sy=1-.12*s+(k>.6?.1*(1-k):0);P.sx=1+.08*s;P.torso=Math.sin(time*40)*.05*s;return P;}
+ }
+ if(moving){const c=Math.sin(f.anim*9);P.legShear=c*.22;P.torso=.07+c*.04;P.torsoY=-Math.abs(c)*4;P.lean=.04;return P;}
+ P.breath=1+Math.sin(time*2.6)*.018;P.torso=Math.sin(time*1.3)*.015;return P;
 }
 // Câmera mais afastada na horizontal: mais espaço visual entre os lutadores
 // e mais tempo/espaço para as flechas atravessarem a arena.
