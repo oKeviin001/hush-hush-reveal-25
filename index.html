@@ -1,13 +1,35 @@
 <!doctype html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
-    <meta name="theme-color" content="#050817" />
-    <title>VEILØRIS — Prototype</title>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.js"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#10100f" />
+  <meta name="description" content="Minha vida. Em breve." />
+  <title>Minha vida — Em breve</title>
+  <style>
+    :root { color-scheme: dark; --bg:#10100f; --paper:#e8e0d0; --muted:#a9a293; --accent:#c6a66b; }
+    * { box-sizing:border-box; }
+    html,body { margin:0; min-height:100%; }
+    body { min-height:100svh; display:grid; place-items:center; padding:28px; background:radial-gradient(ellipse at 50% 42%, #24221d 0%, #151513 44%, var(--bg) 78%); color:var(--paper); font-family:Georgia, 'Times New Roman', serif; }
+    main { width:min(100%,680px); text-align:center; padding:clamp(28px,8vw,72px) 0; }
+    .eyebrow { color:var(--accent); font:600 11px/1.6 system-ui,sans-serif; letter-spacing:.34em; text-transform:uppercase; }
+    .rule { width:52px; height:1px; background:var(--accent); margin:30px auto; opacity:.8; }
+    h1 { margin:0; font-size:clamp(42px,10vw,82px); line-height:.98; font-weight:400; letter-spacing:-.045em; }
+    h1 span { display:block; font-style:italic; color:#c8bda8; }
+    .subtitle { margin:28px auto 0; max-width:390px; color:var(--muted); font:400 14px/1.8 system-ui,sans-serif; letter-spacing:.025em; }
+    .coming { display:inline-block; margin-top:46px; border:1px solid #5d5039; padding:12px 19px; color:#d7c39b; font:600 10px/1.4 system-ui,sans-serif; letter-spacing:.24em; text-transform:uppercase; }
+    footer { margin-top:76px; color:#6f6b62; font:10px/1.6 system-ui,sans-serif; letter-spacing:.18em; text-transform:uppercase; }
+    @media (prefers-reduced-motion:no-preference) { main { animation:appear 1.2s ease both; } @keyframes appear { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } } }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="eyebrow">Um registro pessoal</div>
+    <div class="rule"></div>
+    <h1>Minha vida<span>em breve.</span></h1>
+    <p class="subtitle">Minhas lembranças, minhas histórias, meus caminhos.<br />Tudo no seu tempo. Do meu jeito.</p>
+    <div class="coming">Este espaço está sendo preparado</div>
+    <footer>Uma história real · Sem pressa</footer>
+  </main>
+</body>
 </html>
